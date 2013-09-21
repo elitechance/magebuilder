@@ -72,4 +72,4 @@ Creating Project
 - $ php magebuilder.php create-helper testprj
 - $ php magebuilder.php create-controller testprj/index
 
-> $ php magebuilder.php create-prject test_project testprj
+> $ php magebuilder.php create-project test_project testprj
