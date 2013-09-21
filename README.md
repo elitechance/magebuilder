@@ -4,7 +4,7 @@ magebuilder
 PHP script for prototyping/scaffolding Magento modules, models, controllers, and blocks
 
 #### Setting your Magento document root path
-- $ php magebuidler.php init /var/www/magento
+> $ php magebuidler.php init /var/www/magento
 
 
 #### Creating module
