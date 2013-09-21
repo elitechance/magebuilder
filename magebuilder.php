@@ -779,6 +779,10 @@ $ php magebuilder <command> <[options]>
         * create-block <class-type> [extends <class-type>]
         * create-helper <class-type> [extends <class-type>]
         * create-controller <class-type> [extends <class-type>]
+
+        * check-path <class-type>
+        * check-class <class-type>
+
         Options:
            module-name
                * Test_MageBuilder --> app/etc/Test_MageBuilder.xml
