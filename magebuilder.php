@@ -9,7 +9,7 @@ class MageBuilder {
     const TEMPLATE_MODEL = <<<TEMPLATE_MODEL_HD
 <?php
 
-class %s extends Mage_Core_Model_Abstract {
+class {CLASS} extends Mage_Core_Model_Abstract {
 
     public function _construct() {
         /**
@@ -18,7 +18,7 @@ class %s extends Mage_Core_Model_Abstract {
     }
 
     public function hi() {
-        Zend_Debug::dump("Saying hi from %s");
+        Zend_Debug::dump("Saying hi from {CLASS}");
     }
 }
 
@@ -28,7 +28,7 @@ TEMPLATE_MODEL_HD;
     const TEMPLATE_BLOCK = <<<TEMPLATE_BLOCK_HD
 <?php
 
-class %s extends Mage_Core_Block_Abstract {
+class {CLASS} extends Mage_Core_Block_Abstract {
 
     public function _construct() {
         /**
@@ -37,7 +37,7 @@ class %s extends Mage_Core_Block_Abstract {
     }
 
     public function hi() {
-        Zend_Debug::dump("Saying hi from %s");
+        Zend_Debug::dump("Saying hi from {CLASS}");
     }
 }
 
@@ -48,11 +48,12 @@ TEMPLATE_BLOCK_HD;
     const TEMPLATE_HELPER = <<<TEMPLATE_HELPER_HD
 <?php
 
-class %s extends Mage_Core_Helper_Abstract {
+class {CLASS} extends Mage_Core_Helper_Abstract {
 
     public function hi() {
-        Zend_Debug::dump("Saying hi from %s");
+        Zend_Debug::dump("Saying hi from {CLASS}");
     }
+
 }
 
 ?>
@@ -61,12 +62,12 @@ TEMPLATE_HELPER_HD;
     const TEMPLATE_CONTROLLER = <<<TEMPLATE_CONTROLLER_HD
 <?php
 
-class %s extends Mage_Core_Controller_Front_Action {
+class {CLASS} extends Mage_Core_Controller_Front_Action {
 
     public function indexAction() {
 
-        Zend_Debug::dump("%s Index Action");
-%s
+        Zend_Debug::dump("{CLASS} Index Action");
+{METHODS}
     }
 }
 
@@ -483,7 +484,7 @@ TEMPLATE_CONTROLLER_HD;
     private function _removeDir($dir){
         $files = array_diff(scandir($dir), array('.','..'));
         foreach ($files as $file) {
-            (is_dir("$dir/$file")) ? delTree("$dir/$file") : unlink("$dir/$file");
+            (is_dir("$dir/$file")) ? $this->_removeDir("$dir/$file") : unlink("$dir/$file");
         }
         return rmdir($dir);
     }
@@ -560,24 +561,67 @@ TEMPLATE_CONTROLLER_HD;
         return $classInfo[count($classInfo) - 1 ].'.php';
     }
 
+    /**
+     * @param string $className
+     * @return string
+     */
+    private function _getModelTemplate($className){
+        $template = self::TEMPLATE_MODEL;
+        $template = preg_replace('/{CLASS}/', $className, $template);
+        return $template;
+    }
+
+    /**
+     * @param string $className
+     * @return string
+     */
+    private function _getBlockTemplate($className) {
+        $template = self::TEMPLATE_BLOCK;
+        $template = preg_replace('/{CLASS}/', $className, $template);
+        return $template;
+    }
+
+    /**
+     * @param string $className
+     * @return mixed
+     */
+    private function _getHelperTemplate($className) {
+        $template = self::TEMPLATE_HELPER;
+        $template = preg_replace('/{CLASS}/', $className, $template);
+        return $template;
+    }
+
+    /**
+     * @param string $className
+     * @return mixed
+     */
+    private function _getControllerTemplate($className = '') {
+        $template = self::TEMPLATE_CONTROLLER;
+        $template = preg_replace('/{CLASS}/', $className, $template);
+
+        $testMethods = '';
+        $alias = $this->_getArgParam(self::PARAM_CP_ALIAS);
+        if ($this->_getArgParam(self::PARAM_COMMAND) == self::COMMAND_CREATE_PROJECT) {
+            $testMethods = <<<TEST_METHODS
+        \$helloModel = Mage::getModel('$alias/hello');
+        \$helloModel->hi();
+        \$helperModel = Mage::helper('$alias');
+        \$helperModel->hi();
+
+TEST_METHODS;
+        }
+
+        $template = preg_replace('/{METHODS}/', $testMethods, $template);
+        return $template;
+    }
+
     private function _getTemplate($classType, $className) {
         $template = '';
         switch($classType) {
-            case self::CLASS_MODEL: $template = sprintf(self::TEMPLATE_MODEL, $className, $className); break;
-            case self::CLASS_BLOCK: $template = sprintf(self::TEMPLATE_BLOCK, $className, $className); break;
-            case self::CLASS_HELPER: $template = sprintf(self::TEMPLATE_HELPER, $className, $className); break;
-            case self::CLASS_CONTROLLER:
-                $testMethods = '';
-                $alias = $this->_getArgParam(self::PARAM_CP_ALIAS);
-                if ($this->_getArgParam(self::PARAM_COMMAND) == self::COMMAND_CREATE_PROJECT) {
-                    /**
-                     * Write extra test models for create-project command
-                     */
-                    $testMethods  = "        \$helloModel = Mage::getModel('$alias/hello');\n";
-                    $testMethods .= "        \$helloModel->hi();\n";
-                }
-                $template = sprintf(self::TEMPLATE_CONTROLLER, $className, $className, $testMethods);
-                break;
+            case self::CLASS_MODEL: $template = $this->_getModelTemplate($className); break;
+            case self::CLASS_BLOCK: $template = $this->_getBlockTemplate($className); break;
+            case self::CLASS_HELPER: $template = $this->_getHelperTemplate($className); break;
+            case self::CLASS_CONTROLLER: $template = $this->_getControllerTemplate($className); break;
         }
         return $template;
     }
@@ -632,6 +676,32 @@ TEMPLATE_CONTROLLER_HD;
         $this->_processCreateObject($controller, self::CLASS_CONTROLLER);
     }
 
+    private function _usage(){
+        $usage = <<<USAGE
+Usage:
+$ php magebuilder <command> <[options]>
+    Commands:
+        * create-project <module-name> <module-alias>
+        * create-modules <module-name> <module-alias> [code-pool]
+        * create-model <class-type>
+        * create-block <class-type>
+        * create-helper <class-type>
+        * create-controller <class-type>
+        Options:
+           module-name
+               * Test_MageBuilder --> app/etc/Test_MageBuilder.xml
+               * test_mageBuilder --> app/etc/Test_MageBuilder.xml
+               * test_magebuilder --> app/etc/Test_Magebuilder.xml
+
+           module-alias - Unique identifier for your module
+           class-type - What you normally pass to Magento's factory methods. i.e. Mage::getModel(<class-type>)
+
+Note: Check README.md for more info.
+
+USAGE;
+        $this->_error($usage);
+    }
+
     private function _processCommand() {
         $command = $this->_getArgParam(self::PARAM_COMMAND);
         $type = $this->_getArgParam(self::PARAM_CMD_MODULE);
@@ -644,7 +714,10 @@ TEMPLATE_CONTROLLER_HD;
             case self::COMMAND_CREATE_CONTROLLER: $this->_processCreateObject($type, self::CLASS_CONTROLLER); break;
             case self::COMMAND_CREATE_PROJECT: $this->_processCreateProject(); break;
             case self::COMMAND_INIT: $this->_processInit(); break;
-            default: $this->_error(self::ERRMSG_UNKNOWN_COMMAND, $command);
+            default:
+                $message = sprintf(self::ERRMSG_UNKNOWN_COMMAND, $command);
+                $this->_message($message);
+                $this->_usage();
         }
     }
 
