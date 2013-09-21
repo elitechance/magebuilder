@@ -40,7 +40,7 @@ PHP script for prototyping/scaffolding Magento modules, models, controllers, and
 
 > $ php magebuilder.php create-model mbuilder/ns_model2
 
-#### Creating helper
+#### Creating helpers
 
 - $ php magebuilder.php create-helper mbuilder
 - $ php magebuilder.php create-helper mbuilder/data2
@@ -59,6 +59,18 @@ PHP script for prototyping/scaffolding Magento modules, models, controllers, and
 *This will create Test/MageBuilder/controllers/Admin/ApiController.php*
 
 > $ php magebuilder.php create-controller mbuilder/admin_api
+
+#### Extending custom class
+
+*This will produce the same model class*
+
+> $ php magebuilder.php create-model mbuilder/model
+
+> $ php magebuilder.php create-model mbuilder/model extends core/abstract
+
+*Extending custom class*
+
+> $ php magebuilder.php create-model mbuilder/model extends mbuilder/abstract
 
 ### Creating Project
 
