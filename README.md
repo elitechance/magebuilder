@@ -3,13 +3,12 @@ magebuilder
 
 PHP script for prototyping/scaffolding Magento modules, models, controllers, and blocks
 
-Setting your Magento document root path
----
+#### Setting your Magento document root path
 - $ php magebuidler.php init /var/www/magento
 
 
-Creating module
----
+#### Creating module
+
 > *Module Name:* Test_MageBuilder
 
 > *Alias:* mbuilder
@@ -31,8 +30,7 @@ Creating module
 >$ php magebuilder.php create-module test_mageBuilder mbuilder *community*
 
 
-Creating models
----
+#### Creating models
 
 *This will create Test/MageBuilder/Model/Model1.php*
 
@@ -42,13 +40,12 @@ Creating models
 
 > $ php magebuilder.php create-model mbuilder/ns_model2
 
-Creating helper
----
+#### Creating helper
+
 - $ php magebuilder.php create-helper mbuilder
 - $ php magebuilder.php create-helper mbuilder/data2
 
-Creating contollers
----
+#### Creating contollers
 
 *This will create Test/MageBuilder/controllers/IndexController.php*
 
@@ -58,14 +55,14 @@ Creating contollers
 
 > $ php magebuilder.php create-controller mbuilder/admin_api
 
-Creating blocks
----
+#### Creating blocks
+
 - $ php magebuilder.php create-blocks mbuilder/header
 - $ php magebuilder.php create-blocks mbuilder/home_footer
 
 
-Creating Project
-====
+### Creating Project
+
 *This is shortcut for:*
 - $ php magebuilder.php create-module test_project testprj
 - $ php magebuilder.php create-model testprj/hello
