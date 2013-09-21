@@ -5,7 +5,7 @@ PHP script for prototyping/scaffolding Magento modules, models, controllers, and
 
 Setting your Magento document root path
 ---
-- $ php magebuidler.php init /you/magento/root/path
+- $ php magebuidler.php init /var/www/magento
 
 
 Creating module
@@ -14,7 +14,21 @@ Creating module
 
 > *Alias:* mbuilder
 
-- $ php magebuilder.php create-project test_mageBuilder mbuilder
+*This will create the following:*
+- app/etc/modules/Test_MageBuilder.xml
+- app/code/local/Test/MageBuilder/etc
+- app/code/local/Test/MageBuilder/etc/config.xml
+- app/code/local/Test/MageBuilder/sql/mbuilder_setup
+- app/code/local/Test/MageBuilder/controllers
+- app/code/local/Test/MageBuilder/Helper
+- app/code/local/Test/MageBuilder/Model
+- app/code/local/Test/MageBuilder/Block
+
+>$ php magebuilder.php create-module test_mageBuilder mbuilder
+
+*If you want a different code pool*
+
+>$ php magebuilder.php create-module test_mageBuilder mbuilder *community*
 
 
 Creating models
@@ -37,3 +51,14 @@ Creating blocks
 ---
 - $ php magebuilder.php create-blocks mbuilder/header
 - $ php magebuilder.php create-blocks mbuilder/home_footer
+
+
+Creating Project
+====
+*This is a shortcut of:*
+- $ php magebuilder.php create-module test_project testprj
+- $ php magebuilder.php create-model testprj/hello
+- $ php magebuilder.php create-helper testprj
+- $ php magebuilder.php create-controller testprj/index
+
+> $ php magebuilder.php create-prject test_project testprj
