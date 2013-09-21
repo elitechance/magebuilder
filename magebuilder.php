@@ -91,50 +91,73 @@ TEMPLATE_CONTROLLER_HD;
     const CODEPOOL_CORE = 'core';
     const CODEPOOL_LOCAL = 'local';
 
-    const CLASS_MODEL = '_Model';
-    const CLASS_BLOCK = '_Block';
-    const CLASS_HELPER = '_Helper';
-    const CLASS_CONTROLLER = 'Controller';
+    const GROUP_TYPE_MODEL = 'Model';
+    const GROUP_TYPE_BLOCK = 'Block';
+    const GROUP_TYPE_HELPER = 'Helper';
+    const GROUP_TYPE_CONTROLLER = 'Controller';
     const CLASS_DELIMITER = '_';
 
     /**
-     * PARAM_CM_NAME - Create Module Name
-     * PARAM_CM_ALIAS - Create Module Alias
+     * PIDX_CM_NAME - Create Module Name
+     * PIDX_CM_ALIAS - Create Module Alias
      * ...
      *
      */
-    const PARAM_CM_NAME = 2;
-    const PARAM_CM_ALIAS = 3;
-    const PARAM_CM_CODEPOOL = 4;
+    const PIDX_CM_NAME = 2;
+    const PIDX_CM_ALIAS = 3;
+    const PIDX_CM_CODEPOOL = 4;
+
 
     /**
-     * PARAM_CMD_MODULE - Create Model Module
+     * PIDX_CMD_MODULE - Create Model Module
      */
-    const PARAM_CMD_MODULE = 2;
-    const PARAM_CMD_NAME = 3;
+    const PIDX_CMD_MODULE = 2;
+    const PIDX_CMD_NAME = 3;
 
-    const PARAM_COMMAND = 1;
-    const PARAM_EXTENDS = 3;
-    const PARAM_PARENT_CLASS = 4;
-    const PARAM_INIT = 1;
-    const PARAM_ROOT_PATH = 2;
+    const PIDX_COMMAND = 1;
+    const PIDX_EXTENDS = 3;
+    const PVAL_EXTENDS = 'extends';
+    const PIDX_PARENT_CLASS = 4;
+    const PIDX_INIT = 1;
+    const PIDX_ROOT_PATH = 2;
+    /**
+     * CO - Create Object
+     */
+    const PIDX_CO_CLASS_TYPE = 2;
+
+    /**
+     * Check path
+     */
+    const PIDX_CHECK_PATH_GROUP_TYPE = 2;
+    const PIDX_CHECK_PATH_CLASS_TYPE = 3;
+
+    /**
+     * Check class path
+     */
+    const PIDX_CHECK_CLASS_PATH_GROUP_TYPE = 2;
+    const PIDX_CHECK_CLASS_PATH_CLASS_TYPE = 3;
 
     /**
      * (CP) Create Project
      */
-    const PARAM_CP_MODULE = 2;
-    const PARAM_CP_ALIAS = 3;
+    const PIDX_CP_MODULE = 2;
+    const PIDX_CP_ALIAS = 3;
 
-    const ERRMSG_MAGE_ROOTPATH = "Please specify Magento root path\n\n    $ magebuider init <root path>\n";
     const ERRMSG_CREATE_FILE = "Unable to create file: '%s'\n";
+    const ERRMSG_CREATE_DIR = "Unable to create dir: [%s]\n";
+
     const ERRMSG_INVALID_ROOTPATH = "Please specify a valid Magento root path: '%s'\n";
     const ERRMSG_UNKNOWN_COMMAND = "Unknown Command: [%s]\n";
     const ERRMSG_INVALID_CM_PARAMS = "Please specify name and alias.\n\n    $ magebuilder create-module <module name> <alias>\n";
     const ERRMSG_INVALID_CODEPOOL = "Invalid Code Pool: '%s'\n    $ magebuilder create-module <module name> <alias> [core|community|local]\n";
     const ERRMSG_INVALID_MODULE_NAME = "Module name does not exists [%s].\n\n    Hint:\n    $ magebuider create-module <module name> <alias>\n";
-    const ERRMSG_CREATE_DIR = "Unable to create dir: [%s]\n";
     const ERRMSG_INVALID_CLASS_TYPE = "Invalid class-type: [%s]\n";
+    const ERRMSG_INVALID_GROUP_TYPE = "Invalid group-type: [%s]\n";
+    const ERRMSG_INVALID_CLASS_FILE = "Invalid class file: [%s]\n";
+    const ERRMSG_INVALID_CLASS_PATH = "Invalid class path: [%s]\n";
+
     const ERRMSG_EXTENDING_ITSELF  = "Error: The class is extending itself: [%s]\n";
+    const ERRMSG_MAGE_ROOTPATH = "Please specify Magento root path\n\n    $ magebuider init <root path>\n";
 
     const MESSAGE_VERIFY_FILE = "Are you sure you want to overwrite '%s' [y|n]? (default 'n') \n";
 
@@ -149,6 +172,8 @@ TEMPLATE_CONTROLLER_HD;
     const COMMAND_CREATE_BLOCK = 'create-block';
     const COMMAND_CREATE_CONTROLLER = 'create-controller';
     const COMMAND_CREATE_PROJECT = 'create-project';
+    const COMMAND_CHECK_PATH = 'check-path';
+    const COMMAND_CHECK_CLASS_PATH = 'check-class';
     const COMMAND_INIT = 'init';
 
     /**
@@ -221,7 +246,7 @@ TEMPLATE_CONTROLLER_HD;
         if ($this->_argc <= 2) {
             $this->_error(self::ERRMSG_MAGE_ROOTPATH);
         }
-        $this->_magentoRootPath = $this->_removeEndSlash($this->_getArgParam(self::PARAM_ROOT_PATH));
+        $this->_magentoRootPath = $this->_removeEndSlash($this->_getArgParam(self::PIDX_ROOT_PATH));
         if (!file_exists($this->_magentoRootPath . '/app/Mage.php')) {
             $this->_error(self::ERRMSG_INVALID_ROOTPATH, $this->_magentoRootPath);
         }
@@ -260,7 +285,7 @@ TEMPLATE_CONTROLLER_HD;
 
     protected function _checkConfig() {
         if (!file_exists($this->_mageBuilderDir)) {
-            if ($this->_argc <= 1 || $this->_getArgParam(self::PARAM_INIT) != 'init') {
+            if ($this->_argc <= 1 || $this->_getArgParam(self::PIDX_INIT) != 'init') {
                 $this->_error(self::ERRMSG_MAGE_ROOTPATH);
             }
             $this->_checkInitialMagentoRootPath();
@@ -290,7 +315,7 @@ TEMPLATE_CONTROLLER_HD;
      * @param string $moduleAlias
      */
     private function _addModuleBlocks($xml, $moduleName, $moduleAlias){
-        $xml->global->addChild('blocks')->addChild($moduleAlias)->class = $moduleName . self::CLASS_BLOCK;
+        $xml->global->addChild('blocks')->addChild($moduleAlias)->class = $moduleName .self::CLASS_DELIMITER. self::GROUP_TYPE_BLOCK;
     }
 
     /**
@@ -299,7 +324,7 @@ TEMPLATE_CONTROLLER_HD;
      * @param string $moduleAlias
      */
     private function _addModuleModels($xml, $moduleName, $moduleAlias){
-        $xml->global->addChild('models')->addChild($moduleAlias)->class = $moduleName . self::CLASS_MODEL;
+        $xml->global->addChild('models')->addChild($moduleAlias)->class = $moduleName .self::CLASS_DELIMITER. self::GROUP_TYPE_MODEL;
     }
 
     /**
@@ -308,7 +333,7 @@ TEMPLATE_CONTROLLER_HD;
      * @param string $moduleAlias
      */
     private function _addModuleHelpers($xml, $moduleName, $moduleAlias){
-        $xml->global->addChild('helpers')->addChild($moduleAlias)->class = $moduleName . self::CLASS_HELPER;
+        $xml->global->addChild('helpers')->addChild($moduleAlias)->class = $moduleName .self::CLASS_DELIMITER. self::GROUP_TYPE_HELPER;
     }
 
     /**
@@ -385,7 +410,7 @@ TEMPLATE_CONTROLLER_HD;
         $moduleXml = new SimpleXMLElement('<config></config>');
         $moduleXml->addChild('modules')->addChild($moduleName)->active = 'true';
 
-        $codePool = strtolower($this->_getArgParam(self::PARAM_CM_CODEPOOL));
+        $codePool = strtolower($this->_getArgParam(self::PIDX_CM_CODEPOOL));
         if ($codePool) {
             switch ($codePool) {
                 case self::CODEPOOL_COMMUNITY:
@@ -472,8 +497,8 @@ TEMPLATE_CONTROLLER_HD;
     }
 
     private function _processCreateModule() {
-        $moduleName = $this->_toModuleName( $this->_getArgParam(self::PARAM_CM_NAME) );
-        $moduleAlias = strtolower( $this->_getArgParam(self::PARAM_CM_ALIAS) );
+        $moduleName = $this->_toModuleName( $this->_getArgParam(self::PIDX_CM_NAME) );
+        $moduleAlias = strtolower( $this->_getArgParam(self::PIDX_CM_ALIAS) );
 
         if (!$moduleAlias || !$moduleName) { $this->_error(self::ERRMSG_INVALID_CM_PARAMS); }
 
@@ -510,23 +535,23 @@ TEMPLATE_CONTROLLER_HD;
         return $moduleName;
     }
 
-    private function _getObjectClassName(&$type, $classType){
+    private function _getObjectClassName(&$classType, $groupType){
         $config = Mage::getConfig();
-        switch ($classType) {
-            case self::CLASS_MODEL: return $config->getModelClassName($type);
-            case self::CLASS_HELPER:
+        switch ($groupType) {
+            case self::GROUP_TYPE_MODEL: return $config->getModelClassName($classType);
+            case self::GROUP_TYPE_HELPER:
                 /**
                  * Setting default helper class Data.php
                  */
-                if (!preg_match('/\//', $type)) {
-                    $type .= '/data';
+                if (!preg_match('/\//', $classType)) {
+                    $classType .= '/data';
                 }
-                return $config->getHelperClassName($type);
-            case self::CLASS_BLOCK: return $config->getBlockClassName($type);
-            case self::CLASS_CONTROLLER:
-                $className = $config->getModelClassName($type);
-                $className = preg_replace('/'.self::CLASS_MODEL.'/',  '', $className, 1);
-                $className .= self::CLASS_CONTROLLER;
+                return $config->getHelperClassName($classType);
+            case self::GROUP_TYPE_BLOCK: return $config->getBlockClassName($classType);
+            case self::GROUP_TYPE_CONTROLLER:
+                $className = $config->getModelClassName($classType);
+                $className = preg_replace('/'.self::CLASS_DELIMITER.self::GROUP_TYPE_MODEL.'/',  '', $className, 1);
+                $className .= self::GROUP_TYPE_CONTROLLER;
                 return $className;
             default: return false;
         }
@@ -539,7 +564,7 @@ TEMPLATE_CONTROLLER_HD;
         /**
          * Hack for controller class
          */
-        if (preg_match('/'.self::CLASS_CONTROLLER.'$/', $className)) {
+        if (preg_match('/'.self::GROUP_TYPE_CONTROLLER.'$/', $className)) {
             $moduleDir .= '/controllers';
             if ( count($classInfo) > 3  ) {
                 $moduleTypeDir = $moduleDir.'/'.$classInfo[2];
@@ -552,7 +577,6 @@ TEMPLATE_CONTROLLER_HD;
             $moduleTypeDir = $moduleDir.'/'.$classInfo[2];
         }
 
-        $this->_mkdir($moduleTypeDir);
         for ($i = 0; $i < (count($classInfo)-1); $i++) {
             if ($i == 0 || $i == 1 || $i == 2) { continue; }
             $moduleTypeDir .= '/'.$classInfo[$i];
@@ -566,12 +590,12 @@ TEMPLATE_CONTROLLER_HD;
     }
 
     private function _getParentClassType($childClassName){
-        $hasExtend = $this->_getArgParam(self::PARAM_EXTENDS);
+        $hasExtend = $this->_getArgParam(self::PIDX_EXTENDS);
         $classType = '';
         $parentClassName = '';
 
-        if ($hasExtend) {
-            $classType = $this->_getArgParam(self::PARAM_PARENT_CLASS);
+        if ($hasExtend == self::PVAL_EXTENDS) {
+            $classType = $this->_getArgParam(self::PIDX_PARENT_CLASS);
         }
         else {
             return $parentClassName;
@@ -581,13 +605,13 @@ TEMPLATE_CONTROLLER_HD;
             $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
         }
 
-        $command = $this->_getArgParam(self::PARAM_COMMAND);
+        $command = $this->_getArgParam(self::PIDX_COMMAND);
 
 
         switch($command) {
-            case self::COMMAND_CREATE_MODEL: $parentClassName = $this->_getObjectClassName($classType, self::CLASS_MODEL); break;
-            case self::COMMAND_CREATE_HELPER: $parentClassName = $this->_getObjectClassName($classType, self::CLASS_HELPER); break;
-            case self::COMMAND_CREATE_BLOCK: $parentClassName = $this->_getObjectClassName($classType, self::CLASS_BLOCK); break;
+            case self::COMMAND_CREATE_MODEL: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_MODEL); break;
+            case self::COMMAND_CREATE_HELPER: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_HELPER); break;
+            case self::COMMAND_CREATE_BLOCK: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_BLOCK); break;
             case self::COMMAND_CREATE_CONTROLLER:  $this->_error("@todo - support controller custom extend\n"); break;
         }
         $ok = class_exists($parentClassName);
@@ -668,8 +692,8 @@ TEMPLATE_CONTROLLER_HD;
         $template = preg_replace('/{CLASS}/', $className, $template);
 
         $testMethods = '';
-        $alias = $this->_getArgParam(self::PARAM_CP_ALIAS);
-        if ($this->_getArgParam(self::PARAM_COMMAND) == self::COMMAND_CREATE_PROJECT) {
+        $alias = $this->_getArgParam(self::PIDX_CP_ALIAS);
+        if ($this->_getArgParam(self::PIDX_COMMAND) == self::COMMAND_CREATE_PROJECT) {
             $testMethods = <<<TEST_METHODS
         \$helloModel = Mage::getModel('$alias/hello');
         \$helloModel->hi();
@@ -686,18 +710,18 @@ TEST_METHODS;
     private function _getTemplate($classType, $className) {
         $template = '';
         switch($classType) {
-            case self::CLASS_MODEL: $template = $this->_getModelTemplate($className); break;
-            case self::CLASS_BLOCK: $template = $this->_getBlockTemplate($className); break;
-            case self::CLASS_HELPER: $template = $this->_getHelperTemplate($className); break;
-            case self::CLASS_CONTROLLER: $template = $this->_getControllerTemplate($className); break;
+            case self::GROUP_TYPE_MODEL: $template = $this->_getModelTemplate($className); break;
+            case self::GROUP_TYPE_BLOCK: $template = $this->_getBlockTemplate($className); break;
+            case self::GROUP_TYPE_HELPER: $template = $this->_getHelperTemplate($className); break;
+            case self::GROUP_TYPE_CONTROLLER: $template = $this->_getControllerTemplate($className); break;
         }
         return $template;
     }
 
-    private function _processCreateObject($type, $classType) {
+    private function _processCreateObject($classType, $groupType) {
         try {
-            $className = $this->_getObjectClassName($type, $classType);
-            $moduleName = $this->_getModuleName($type);
+            $className = $this->_getObjectClassName($classType, $groupType);
+            $moduleName = $this->_getModuleName($classType);
             $moduleFile = $this->_magentoRootPath.'/app/etc/modules/'.$moduleName.'.xml';
             if (!file_exists($moduleFile)) {
                 $this->_error(self::ERRMSG_INVALID_MODULE_NAME, $moduleFile);
@@ -706,7 +730,7 @@ TEST_METHODS;
             $this->_mkdir($classNameDir);
 
             $classNameFile = $classNameDir . '/'. $this->_getClassNameFile($className);
-            $template = $this->_getTemplate($classType, $className);
+            $template = $this->_getTemplate($groupType, $className);
 
             /**
              * Debug
@@ -729,7 +753,7 @@ TEST_METHODS;
     }
 
     private function _processCreateProject(){
-        $alias = $this->_getArgParam(self::PARAM_CP_ALIAS);
+        $alias = $this->_getArgParam(self::PIDX_CP_ALIAS);
         $model = $alias.'/hello';
         $helper = $alias;
         $controller = $alias.'/index';
@@ -739,9 +763,9 @@ TEST_METHODS;
         $this->_mageConfig->cleanCache();
         $this->_message(self::MESSAGE_REFRESH_CONFIG_CACHE_DONE);
 
-        $this->_processCreateObject($model, self::CLASS_MODEL);
-        $this->_processCreateObject($helper, self::CLASS_HELPER);
-        $this->_processCreateObject($controller, self::CLASS_CONTROLLER);
+        $this->_processCreateObject($model, self::GROUP_TYPE_MODEL);
+        $this->_processCreateObject($helper, self::GROUP_TYPE_HELPER);
+        $this->_processCreateObject($controller, self::GROUP_TYPE_CONTROLLER);
     }
 
     private function _usage(){
@@ -771,18 +795,83 @@ USAGE;
         $this->_error($usage);
     }
 
+    /**
+     * @param string $groupType
+     * @return bool
+     */
+    private function _isValudGroupType($groupType) {
+        $groupType = ucfirst($groupType);
+        switch ($groupType) {
+            case self::GROUP_TYPE_BLOCK:
+            case self::GROUP_TYPE_MODEL:
+            case self::GROUP_TYPE_HELPER:
+            case self::GROUP_TYPE_CONTROLLER:  return true;
+            default: return false;
+        }
+    }
+
+    private function _getPathByGroupTypeAndClassType($classType, $groupType) {
+        $groupType = ucfirst($groupType);
+        $isValidGroupType = $this->_isValudGroupType($groupType);
+        if (!$isValidGroupType) {
+            $this->_error(self::ERRMSG_INVALID_GROUP_TYPE, strtolower($groupType));
+        }
+
+        if (!$classType) {
+            $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
+        }
+
+        $className = $this->_getObjectClassName($classType, $groupType);
+        $classDir = $this->_getClassNameDir($className);
+        return $classDir;
+    }
+
+    private function _processCheckClassPath() {
+        $groupType = $this->_getArgParam(self::PIDX_CHECK_CLASS_PATH_GROUP_TYPE);
+        $classType = $this->_getArgParam(self::PIDX_CHECK_CLASS_PATH_CLASS_TYPE);
+        $groupType = ucfirst($groupType);
+
+        $classDir = $this->_getPathByGroupTypeAndClassType($classType, $groupType);
+        $className = $this->_getObjectClassName($classType, $groupType);
+        $classFile = $classDir.'/'.$this->_getClassNameFile($className);
+
+        if (file_exists($classFile)) {
+            $this->_message($classFile."\n");
+        }
+        else {
+            $this->_error(self::ERRMSG_INVALID_CLASS_FILE, $classFile);
+        }
+    }
+
+    private function _processCheckPath() {
+        $groupType = $this->_getArgParam(self::PIDX_CHECK_PATH_GROUP_TYPE);
+        $classType = $this->_getArgParam(self::PIDX_CHECK_PATH_CLASS_TYPE);
+
+        $classDir = $this->_getPathByGroupTypeAndClassType($classType, $groupType);
+
+        $result = file_exists($classDir);
+        if (file_exists($classDir)) {
+            $this->_message($classDir."\n");
+        }
+        else {
+            $this->_error(self::ERRMSG_INVALID_CLASS_PATH, $classDir);
+        }
+    }
+
     private function _processCommand() {
-        $command = $this->_getArgParam(self::PARAM_COMMAND);
-        $type = $this->_getArgParam(self::PARAM_CMD_MODULE);
+        $command = $this->_getArgParam(self::PIDX_COMMAND);
+        $classType = $this->_getArgParam(self::PIDX_CO_CLASS_TYPE);
         $this->_mageConfig = Mage::getConfig();
         switch ($command) {
             case self::COMMAND_CREATE_MODULE: $this->_processCreateModule(); break;
-            case self::COMMAND_CREATE_MODEL: $this->_processCreateObject($type, self::CLASS_MODEL); break;
-            case self::COMMAND_CREATE_HELPER: $this->_processCreateObject($type, self::CLASS_HELPER); break;
-            case self::COMMAND_CREATE_BLOCK: $this->_processCreateObject($type, self::CLASS_BLOCK); break;
-            case self::COMMAND_CREATE_CONTROLLER: $this->_processCreateObject($type, self::CLASS_CONTROLLER); break;
+            case self::COMMAND_CREATE_MODEL: $this->_processCreateObject($classType, self::GROUP_TYPE_MODEL); break;
+            case self::COMMAND_CREATE_HELPER: $this->_processCreateObject($classType, self::GROUP_TYPE_HELPER); break;
+            case self::COMMAND_CREATE_BLOCK: $this->_processCreateObject($classType, self::GROUP_TYPE_BLOCK); break;
+            case self::COMMAND_CREATE_CONTROLLER: $this->_processCreateObject($classType, self::GROUP_TYPE_CONTROLLER); break;
             case self::COMMAND_CREATE_PROJECT: $this->_processCreateProject(); break;
             case self::COMMAND_INIT: $this->_processInit(); break;
+            case self::COMMAND_CHECK_PATH: $this->_processCheckPath(); break;
+            case self::COMMAND_CHECK_CLASS_PATH: $this->_processCheckClassPath(); break;
             default:
                 $message = sprintf(self::ERRMSG_UNKNOWN_COMMAND, $command);
                 $this->_message($message);
