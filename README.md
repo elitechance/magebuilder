@@ -33,8 +33,14 @@ Creating module
 
 Creating models
 ---
-- $ php magebuilder.php create-model mbuilder/model1
-- $ php magebuilder.php create-model mbuilder/ns_model2
+
+*This will create Test/MageBuilder/Model/Model1.php*
+
+> $ php magebuilder.php create-model mbuilder/model1
+
+*This will create Test/MageBuilder/Model/Ns/Model2.php*
+
+> $ php magebuilder.php create-model mbuilder/ns_model2
 
 Creating helper
 ---
@@ -43,9 +49,14 @@ Creating helper
 
 Creating contollers
 ---
-- $ php magebuilder.php create-controllers mbuilder/index
-- $ php magebuilder.php create-controllers mbuilder/admin
-- $ php magebuilder.php create-controllers mbuilder/admin_api
+
+*This will create Test/MageBuilder/controllers/IndexController.php*
+
+> $ php magebuilder.php create-controller mbuilder/index
+
+*This will create Test/MageBuilder/controllers/Admin/ApiController.php*
+
+> $ php magebuilder.php create-controller mbuilder/admin_api
 
 Creating blocks
 ---
@@ -55,7 +66,7 @@ Creating blocks
 
 Creating Project
 ====
-*This is a shortcut of:*
+*This is shortcut for:*
 - $ php magebuilder.php create-module test_project testprj
 - $ php magebuilder.php create-model testprj/hello
 - $ php magebuilder.php create-helper testprj
