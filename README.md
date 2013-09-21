@@ -72,6 +72,17 @@ PHP script for prototyping/scaffolding Magento modules, models, controllers, and
 
 > $ php magebuilder.php create-model mbuilder/model extends mbuilder/abstract
 
+#### Checking paths
+
+> $ php magebuilder.php check-path model sales/order
+
+> $ php magebuilder.php check-path model sales/order_invoice_api
+
+#### Checking for file location
+
+> $ php magebuilder.php check-class model sales/order
+
+
 ### Creating Project
 
 *This is shortcut for:*
