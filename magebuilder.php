@@ -9,7 +9,7 @@ class MageBuilder {
     const TEMPLATE_MODEL = <<<TEMPLATE_MODEL_HD
 <?php
 
-class {CLASS} extends Mage_Core_Model_Abstract {
+class {CLASS} extends {PARENT_CLASS} {
 
     public function _construct() {
         /**
@@ -28,7 +28,7 @@ TEMPLATE_MODEL_HD;
     const TEMPLATE_BLOCK = <<<TEMPLATE_BLOCK_HD
 <?php
 
-class {CLASS} extends Mage_Core_Block_Abstract {
+class {CLASS} extends {PARENT_CLASS} {
 
     public function _construct() {
         /**
@@ -48,7 +48,7 @@ TEMPLATE_BLOCK_HD;
     const TEMPLATE_HELPER = <<<TEMPLATE_HELPER_HD
 <?php
 
-class {CLASS} extends Mage_Core_Helper_Abstract {
+class {CLASS} extends {PARENT_CLASS} {
 
     public function hi() {
         Zend_Debug::dump("Saying hi from {CLASS}");
@@ -114,6 +114,8 @@ TEMPLATE_CONTROLLER_HD;
     const PARAM_CMD_NAME = 3;
 
     const PARAM_COMMAND = 1;
+    const PARAM_EXTENDS = 3;
+    const PARAM_PARENT_CLASS = 4;
     const PARAM_INIT = 1;
     const PARAM_ROOT_PATH = 2;
 
@@ -131,6 +133,8 @@ TEMPLATE_CONTROLLER_HD;
     const ERRMSG_INVALID_CODEPOOL = "Invalid Code Pool: '%s'\n    $ magebuilder create-module <module name> <alias> [core|community|local]\n";
     const ERRMSG_INVALID_MODULE_NAME = "Module name does not exists [%s].\n\n    Hint:\n    $ magebuider create-module <module name> <alias>\n";
     const ERRMSG_CREATE_DIR = "Unable to create dir: [%s]\n";
+    const ERRMSG_INVALID_CLASS_TYPE = "Invalid class-type: [%s]\n";
+    const ERRMSG_EXTENDING_ITSELF  = "Error: The class is extending itself: [%s]\n";
 
     const MESSAGE_VERIFY_FILE = "Are you sure you want to overwrite '%s' [y|n]? (default 'n') \n";
 
@@ -561,13 +565,53 @@ TEMPLATE_CONTROLLER_HD;
         return $classInfo[count($classInfo) - 1 ].'.php';
     }
 
+    private function _getParentClassType($childClassName){
+        $hasExtend = $this->_getArgParam(self::PARAM_EXTENDS);
+
+        $classType = '';
+        if ($hasExtend) {
+            $classType = $this->_getArgParam(self::PARAM_PARENT_CLASS);
+        }
+
+        if (!$classType) {
+            $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
+        }
+
+        $command = $this->_getArgParam(self::PARAM_COMMAND);
+
+        $parentClassName = '';
+
+        switch($command) {
+            case self::COMMAND_CREATE_MODEL: $parentClassName = $this->_getObjectClassName($classType, self::CLASS_MODEL); break;
+        }
+        $ok = class_exists($parentClassName);
+        if (!$ok) {
+            $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
+        }
+
+        if ($childClassName == $parentClassName) {
+            $this->_error(self::ERRMSG_EXTENDING_ITSELF, $childClassName);
+        }
+
+        return $parentClassName;
+    }
+
     /**
      * @param string $className
      * @return string
      */
     private function _getModelTemplate($className){
+        $parent = 'Mage_Core_Model_Abstract';
+
+        $customParent = $this->_getParentClassType($className);
+
+        if ($customParent) {
+            $parent = $customParent;
+        }
+
         $template = self::TEMPLATE_MODEL;
         $template = preg_replace('/{CLASS}/', $className, $template);
+        $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
         return $template;
     }
 
@@ -576,8 +620,17 @@ TEMPLATE_CONTROLLER_HD;
      * @return string
      */
     private function _getBlockTemplate($className) {
+        $parent = 'Mage_Core_Block_Abstract';
+
+        $customParent = $this->_getParentClassType($className);
+
+        if ($customParent) {
+            $parent = $customParent;
+        }
+
         $template = self::TEMPLATE_BLOCK;
         $template = preg_replace('/{CLASS}/', $className, $template);
+        $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
         return $template;
     }
 
@@ -586,8 +639,17 @@ TEMPLATE_CONTROLLER_HD;
      * @return mixed
      */
     private function _getHelperTemplate($className) {
+        $parent = 'Mage_Core_Helper_Abstract';
+
+        $customParent = $this->_getParentClassType($className);
+
+        if ($customParent) {
+            $parent = $customParent;
+        }
+
         $template = self::TEMPLATE_HELPER;
         $template = preg_replace('/{CLASS}/', $className, $template);
+        $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
         return $template;
     }
 
@@ -683,10 +745,10 @@ $ php magebuilder <command> <[options]>
     Commands:
         * create-project <module-name> <module-alias>
         * create-modules <module-name> <module-alias> [code-pool]
-        * create-model <class-type>
-        * create-block <class-type>
-        * create-helper <class-type>
-        * create-controller <class-type>
+        * create-model <class-type> [extends <class-type>]
+        * create-block <class-type> [extends <class-type>]
+        * create-helper <class-type> [extends <class-type>]
+        * create-controller <class-type> [extends <class-type>]
         Options:
            module-name
                * Test_MageBuilder --> app/etc/Test_MageBuilder.xml
@@ -695,6 +757,7 @@ $ php magebuilder <command> <[options]>
 
            module-alias - Unique identifier for your module
            class-type - What you normally pass to Magento's factory methods. i.e. Mage::getModel(<class-type>)
+           extends - You want to specify a different parent class
 
 Note: Check README.md for more info.
 
