@@ -18,7 +18,7 @@ class {CLASS} extends {PARENT_CLASS} {
     }
 
     public function hi() {
-        Zend_Debug::dump("Saying hi from {CLASS}");
+        Zend_Debug::dump("Inside {CLASS}::hi() method");
     }
 }
 
@@ -37,7 +37,7 @@ class {CLASS} extends {PARENT_CLASS} {
     }
 
     public function hi() {
-        Zend_Debug::dump("Saying hi from {CLASS}");
+        Zend_Debug::dump("Inside {CLASS}::hi() method");
     }
 }
 
@@ -51,7 +51,7 @@ TEMPLATE_BLOCK_HD;
 class {CLASS} extends {PARENT_CLASS} {
 
     public function hi() {
-        Zend_Debug::dump("Saying hi from {CLASS}");
+        Zend_Debug::dump("Inside {CLASS}::hi() method");
     }
 
 }
@@ -567,10 +567,14 @@ TEMPLATE_CONTROLLER_HD;
 
     private function _getParentClassType($childClassName){
         $hasExtend = $this->_getArgParam(self::PARAM_EXTENDS);
-
         $classType = '';
+        $parentClassName = '';
+
         if ($hasExtend) {
             $classType = $this->_getArgParam(self::PARAM_PARENT_CLASS);
+        }
+        else {
+            return $parentClassName;
         }
 
         if (!$classType) {
@@ -579,10 +583,12 @@ TEMPLATE_CONTROLLER_HD;
 
         $command = $this->_getArgParam(self::PARAM_COMMAND);
 
-        $parentClassName = '';
 
         switch($command) {
             case self::COMMAND_CREATE_MODEL: $parentClassName = $this->_getObjectClassName($classType, self::CLASS_MODEL); break;
+            case self::COMMAND_CREATE_HELPER: $parentClassName = $this->_getObjectClassName($classType, self::CLASS_HELPER); break;
+            case self::COMMAND_CREATE_BLOCK: $parentClassName = $this->_getObjectClassName($classType, self::CLASS_BLOCK); break;
+            case self::COMMAND_CREATE_CONTROLLER:  $this->_error("@todo - support controller custom extend\n"); break;
         }
         $ok = class_exists($parentClassName);
         if (!$ok) {
