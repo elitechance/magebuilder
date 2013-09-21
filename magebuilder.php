@@ -1,0 +1,672 @@
+<?php
+/**
+ * User: Ethan Dave Gomez
+ * Date: 9/18/13
+ * Time: 4:29 PM
+ */
+
+class MageBuilder {
+    const TEMPLATE_MODEL = <<<TEMPLATE_MODEL_HD
+<?php
+
+class %s extends Mage_Core_Model_Abstract {
+
+    public function _construct() {
+        /**
+         * @todo - init must go here
+         */
+    }
+
+    public function hi() {
+        Zend_Debug::dump("Saying hi from %s");
+    }
+}
+
+?>
+TEMPLATE_MODEL_HD;
+
+    const TEMPLATE_BLOCK = <<<TEMPLATE_BLOCK_HD
+<?php
+
+class %s extends Mage_Core_Block_Abstract {
+
+    public function _construct() {
+        /**
+         * @todo - init must go here
+         */
+    }
+
+    public function hi() {
+        Zend_Debug::dump("Saying hi from %s");
+    }
+}
+
+?>
+TEMPLATE_BLOCK_HD;
+
+
+    const TEMPLATE_HELPER = <<<TEMPLATE_HELPER_HD
+<?php
+
+class %s extends Mage_Core_Helper_Abstract {
+
+    public function hi() {
+        Zend_Debug::dump("Saying hi from %s");
+    }
+}
+
+?>
+TEMPLATE_HELPER_HD;
+
+    const TEMPLATE_CONTROLLER = <<<TEMPLATE_CONTROLLER_HD
+<?php
+
+class %s extends Mage_Core_Controller_Front_Action {
+
+    public function indexAction() {
+
+        Zend_Debug::dump("%s Index Action");
+%s
+    }
+}
+
+?>
+TEMPLATE_CONTROLLER_HD;
+
+    const CACHE_TYPES_BLOCK_HTML = 'block_html';
+    const CACHE_TYPES_COLLECTIONS = 'collections';
+    const CACHE_TYPES_CONFIG = 'config';
+    const CACHE_TYPES_CONFIG_API = 'config_api';
+    const CACHE_TYPES_CONFIG_API2 = 'config_api2';
+    const CACHE_TYPES_EAV = 'eav';
+    const CACHE_TYPES_FULL_PAGE = 'full_page';
+    const CACHE_TYPES_LAYOUT = 'layout';
+    const CACHE_TYPES_TRANSLATE = 'translate';
+
+    const CONFIG_DIR = '.magebuilder';
+    const CONFIG_FILE = 'config.json';
+
+    const CODEPOOL_COMMUNITY = 'community';
+    const CODEPOOL_CORE = 'core';
+    const CODEPOOL_LOCAL = 'local';
+
+    const CLASS_MODEL = '_Model';
+    const CLASS_BLOCK = '_Block';
+    const CLASS_HELPER = '_Helper';
+    const CLASS_CONTROLLER = 'Controller';
+    const CLASS_DELIMITER = '_';
+
+    /**
+     * PARAM_CM_NAME - Create Module Name
+     * PARAM_CM_ALIAS - Create Module Alias
+     * ...
+     *
+     */
+    const PARAM_CM_NAME = 2;
+    const PARAM_CM_ALIAS = 3;
+    const PARAM_CM_CODEPOOL = 4;
+
+    /**
+     * PARAM_CMD_MODULE - Create Model Module
+     */
+    const PARAM_CMD_MODULE = 2;
+    const PARAM_CMD_NAME = 3;
+
+    const PARAM_COMMAND = 1;
+    const PARAM_INIT = 1;
+    const PARAM_ROOT_PATH = 2;
+
+    /**
+     * (CP) Create Project
+     */
+    const PARAM_CP_MODULE = 2;
+    const PARAM_CP_ALIAS = 3;
+
+    const ERRMSG_MAGE_ROOTPATH = "Please specify Magento root path\n\n    $ magebuider init <root path>\n";
+    const ERRMSG_CREATE_FILE = "Unable to create file: '%s'\n";
+    const ERRMSG_INVALID_ROOTPATH = "Please specify a valid Magento root path: '%s'\n";
+    const ERRMSG_UNKNOWN_COMMAND = "Unknown Command: [%s]\n";
+    const ERRMSG_INVALID_CM_PARAMS = "Please specify name and alias.\n\n    $ magebuilder create-module <module name> <alias>\n";
+    const ERRMSG_INVALID_CODEPOOL = "Invalid Code Pool: '%s'\n    $ magebuilder create-module <module name> <alias> [core|community|local]\n";
+    const ERRMSG_INVALID_MODULE_NAME = "Module name does not exists [%s].\n\n    Hint:\n    $ magebuider create-module <module name> <alias>\n";
+    const ERRMSG_CREATE_DIR = "Unable to create dir: [%s]\n";
+
+    const MESSAGE_VERIFY_FILE = "Are you sure you want to overwrite '%s' [y|n]? (default 'n') \n";
+
+    const MESSAGE_REFRESH_XML_CACHE = "Refreshing *.xml Cache...\n";
+    const MESSAGE_REFRESH_XML_CACHE_DONE = "Refreshing *.xml Cache... Done\n";
+    const MESSAGE_REFRESH_CONFIG_CACHE = "Refreshing Config Cache...\n";
+    const MESSAGE_REFRESH_CONFIG_CACHE_DONE = "Refreshing Config Cache... Done\n";
+
+    const COMMAND_CREATE_MODULE = 'create-module';
+    const COMMAND_CREATE_MODEL = 'create-model';
+    const COMMAND_CREATE_HELPER = 'create-helper';
+    const COMMAND_CREATE_BLOCK = 'create-block';
+    const COMMAND_CREATE_CONTROLLER = 'create-controller';
+    const COMMAND_CREATE_PROJECT = 'create-project';
+    const COMMAND_INIT = 'init';
+
+    /**
+     * @var string
+     */
+    protected $_homeDir;
+
+    /**
+     * @var string
+     */
+    protected $_mageBuilderDir;
+
+    /**
+     * @var string
+     */
+    protected $_magentoRootPath;
+
+    /**
+     * @var array
+     */
+    protected $_argv;
+
+    /**
+     * @var int
+     */
+    protected $_argc;
+
+    /**
+     * @var array
+     */
+    protected $_config;
+
+    /**
+     * @var string
+     */
+    protected $_codePool;
+
+    /**
+     * @var string
+     */
+    protected $_mageBuilderFile;
+
+    /**
+     * @var Mage_Core_Model_Config
+     */
+    protected $_mageConfig;
+
+    private function _error($message) {
+        $args = func_get_args();
+        switch(count($args)) {
+            case 2: printf($message, $args[1]); break;
+            case 3: printf($message, $args[1], $args[2]); break;
+            case 4: printf($message, $args[1], $args[2], $args[3]); break;
+            case 5: printf($message, $args[1], $args[2], $args[3], $args[4]); break;
+            default: printf($message);
+        }
+        exit;
+    }
+
+    private function _removeEndSlash($path) {
+        return preg_replace('/\/$/', '', $path);
+    }
+
+    private function _loadMagento() {
+        require_once $this->_magentoRootPath . '/app/Mage.php';
+        Mage::app('admin');
+    }
+
+    private function _testMagentoRootPath() {
+        if ($this->_argc <= 2) {
+            $this->_error(self::ERRMSG_MAGE_ROOTPATH);
+        }
+        $this->_magentoRootPath = $this->_removeEndSlash($this->_getArgParam(self::PARAM_ROOT_PATH));
+        if (!file_exists($this->_magentoRootPath . '/app/Mage.php')) {
+            $this->_error(self::ERRMSG_INVALID_ROOTPATH, $this->_magentoRootPath);
+        }
+    }
+
+    private function _checkInitialMagentoRootPath() {
+        $this->_testMagentoRootPath();
+        $this->_loadMagento();
+        $this->_magentoRootPath = Mage::getBaseDir();
+        $this->_config = (object) array();
+        $this->_config->magentoRootPath = $this->_magentoRootPath;
+    }
+
+    private function _loadConfig() {
+        $fp = fopen($this->_mageBuilderFile, "r");
+        $this->_config = json_decode( fread($fp, 1024) );
+        fclose($fp);
+        $this->_magentoRootPath = $this->_config->magentoRootPath;
+    }
+
+    private function _saveConfig() {
+        $fp = fopen($this->_mageBuilderFile, "w");
+        if (!$fp) {
+            $this->_error(self::ERRMSG_CREATE_FILE, $this->_mageBuilderFile);
+        }
+        fwrite($fp, json_encode($this->_config));
+        fclose($fp);
+    }
+
+    private function _createMageBuilderDir(){
+        $ok = $this->_mkdir($this->_mageBuilderDir);
+        if (!$ok) {
+            $this->_error(self::ERRMSG_CREATE_DIR, $this->_homeDir);
+        }
+    }
+
+    protected function _checkConfig() {
+        if (!file_exists($this->_mageBuilderDir)) {
+            if ($this->_argc <= 1 || $this->_getArgParam(self::PARAM_INIT) != 'init') {
+                $this->_error(self::ERRMSG_MAGE_ROOTPATH);
+            }
+            $this->_checkInitialMagentoRootPath();
+            $this->_createMageBuilderDir();
+
+            $this->_saveConfig();
+            exit;
+        }
+        else {
+            $this->_loadConfig();
+            $this->_loadMagento();
+        }
+    }
+
+    private function _detectHomeDir() {
+        $this->_homeDir = $this->_removeEndSlash( $_SERVER['HOME'] );
+    }
+
+    private function _toModuleName($name) {
+        $namespace = explode(self::CLASS_DELIMITER, $name);
+        return ucfirst($namespace[0]) . self::CLASS_DELIMITER . ucfirst($namespace[1]);
+    }
+
+    /**
+     * @param SimpleXMLElement $xml
+     * @param string $moduleName
+     * @param string $moduleAlias
+     */
+    private function _addModuleBlocks($xml, $moduleName, $moduleAlias){
+        $xml->global->addChild('blocks')->addChild($moduleAlias)->class = $moduleName . self::CLASS_BLOCK;
+    }
+
+    /**
+     * @param SimpleXMLElement $xml
+     * @param string $moduleName
+     * @param string $moduleAlias
+     */
+    private function _addModuleModels($xml, $moduleName, $moduleAlias){
+        $xml->global->addChild('models')->addChild($moduleAlias)->class = $moduleName . self::CLASS_MODEL;
+    }
+
+    /**
+     * @param SimpleXMLElement $xml
+     * @param string $moduleName
+     * @param string $moduleAlias
+     */
+    private function _addModuleHelpers($xml, $moduleName, $moduleAlias){
+        $xml->global->addChild('helpers')->addChild($moduleAlias)->class = $moduleName . self::CLASS_HELPER;
+    }
+
+    /**
+     * @param SimpleXMLElement $xml
+     * @param string $moduleName
+     * @param string $moduleAlias
+     */
+    private function _addModuleResources($xml, $moduleName, $moduleAlias){
+        $xml->global->addChild('resources')->addChild($moduleAlias.'_setup')->addChild('setup')->module = $moduleName;
+    }
+
+    /**
+     * @param SimpleXMLElement $xml
+     * @param string $moduleName
+     * @param string $moduleAlias
+     */
+    private function _addModuleFrontend($xml, $moduleName, $moduleAlias){
+        $xml->addChild('frontend')->addChild('routers')->addChild($moduleAlias)->use = 'standard';
+        $xml->frontend->routers->{$moduleAlias}->use = 'standard';
+        $xml->frontend->routers->{$moduleAlias}->addChild('args')->module = $moduleName;
+        $xml->frontend->routers->{$moduleAlias}->args->frontName = $moduleAlias;
+    }
+
+    /**
+     * @param SimpleXMLElement $xml
+     * @param string $moduleName
+     * @param string $moduleAlias
+     */
+    private function _addModuleLayout($xml, $moduleName, $moduleAlias){
+        $xml->frontend->addChild('layout')->addChild('updates')->addChild($moduleAlias)->file = $moduleAlias.'.xml';
+        $xml->frontend->layout->updates->{$moduleAlias}->addAttribute('module', $moduleName);
+    }
+
+    private function _verify($message) {
+        echo $message;
+        $response = $this->_readLn();
+        return $response;
+    }
+
+    private function _message($message) {
+        echo $message;
+    }
+
+    private function _createFile($path, $content, $check = true){
+        if ($check) {
+            if (file_exists($path)) {
+                $response = $this->_verify(sprintf(self::MESSAGE_VERIFY_FILE, $path));
+
+                if (!$response) { $response = 'n'; }
+
+                if ($response == 'n') {return;}
+            }
+        }
+
+        $fp = fopen($path, "w");
+
+        if (!$fp) {
+            $this->_error(self::ERRMSG_CREATE_FILE, $path);
+        }
+
+        fwrite($fp, $content);
+        fclose($fp);
+    }
+
+    private function _readLn() {
+        $stdin = fopen("php://stdin", "r");
+        $line = fgets($stdin);
+        $line = preg_replace("/\n$/", '', $line);
+        $line = preg_replace("/\r$/", '', $line);
+        return $line;
+    }
+
+    private function _createEtcModule($moduleName, $moduleAlias){
+        $moduleXml = new SimpleXMLElement('<config></config>');
+        $moduleXml->addChild('modules')->addChild($moduleName)->active = 'true';
+
+        $codePool = strtolower($this->_getArgParam(self::PARAM_CM_CODEPOOL));
+        if ($codePool) {
+            switch ($codePool) {
+                case self::CODEPOOL_COMMUNITY:
+                case self::CODEPOOL_CORE:
+                case self::CODEPOOL_LOCAL: break;
+                default: $this->_error(self::ERRMSG_INVALID_CODEPOOL, $codePool);
+            }
+        }
+        else {
+            $codePool = self::CODEPOOL_LOCAL;
+        }
+
+        $this->_codePool = $codePool;
+        $moduleXml->modules->{$moduleName}->codePool = $codePool;
+        $dom = dom_import_simplexml($moduleXml)->ownerDocument;
+        $dom->formatOutput = true;
+        $moduleFile = $this->_magentoRootPath . '/app/etc/modules/'.$moduleName.'.xml';
+        $this->_createFile($moduleFile, $dom->saveXML());
+    }
+
+    private function _createModuleConfig($moduleName, $moduleAlias){
+        $moduleConfigXml = new SimpleXMLElement('<config></config>');
+        $moduleConfigXml->addChild('modules')->addChild($moduleName)->addChild('version');
+        $moduleConfigXml->modules->{$moduleName}->version = '0.0.1';
+
+        $global = $moduleConfigXml->children('global');
+        if (!$global) { $moduleConfigXml->addChild('global'); }
+
+        $this->_addModuleBlocks($moduleConfigXml, $moduleName, $moduleAlias);
+        $this->_addModuleModels($moduleConfigXml, $moduleName, $moduleAlias);
+        $this->_addModuleHelpers($moduleConfigXml, $moduleName, $moduleAlias);
+        $this->_addModuleResources($moduleConfigXml, $moduleName, $moduleAlias);
+        $this->_addModuleFrontend($moduleConfigXml, $moduleName, $moduleAlias);
+        $this->_addModuleLayout($moduleConfigXml, $moduleName, $moduleAlias);
+
+        $dom = dom_import_simplexml($moduleConfigXml)->ownerDocument;
+        $dom->formatOutput = true;
+
+        $moduleNameInfo = explode(self::CLASS_DELIMITER, $moduleName);
+        $moduleDir = $this->_magentoRootPath.'/app/code/'.$this->_codePool.'/'.$moduleNameInfo[0].'/'.$moduleNameInfo[1];
+        $this->_mkdir($moduleDir);
+        $this->_mkdir($moduleDir.'/etc');
+        $this->_mkdir($moduleDir.'/controllers');
+        $this->_mkdir($moduleDir.'/Helper');
+        $this->_mkdir($moduleDir.'/Model');
+        $this->_mkdir($moduleDir.'/Block');
+        $this->_mkdir($moduleDir.'/sql');
+        $this->_mkdir($moduleDir.'/sql/'.$moduleAlias.'_setup');
+
+        $moduleConfigFile = $moduleDir.'/etc/config.xml';
+        $this->_createFile($moduleConfigFile, $dom->saveXML());
+    }
+
+    private function _mkdir($dir, $checkError = false) {
+        if (file_exists($dir)) { return false; }
+        $result = mkdir($dir, 0775, true);
+        if (!$result && $checkError) {
+            $this->_error(self::ERRMSG_CREATE_DIR, $dir);
+        }
+        return $result;
+    }
+
+    protected function _refreshCache($cacheType = null) {
+        try {
+            /**
+             * @var array $allTypes
+             */
+            $allTypes = Mage::app()->useCache();
+            foreach($allTypes as $type => $isActive) {
+                if ($cacheType) {
+                    if ($cacheType == $type) {
+                        Mage::app()->getCacheInstance()->cleanType($type);
+                        break;
+                    }
+                }
+                else {
+                    Mage::app()->getCacheInstance()->cleanType($type);
+                }
+            }
+        } catch (Exception $e) {
+            // do something
+            error_log($e->getMessage());
+        }
+    }
+
+    private function _processCreateModule() {
+        $moduleName = $this->_toModuleName( $this->_getArgParam(self::PARAM_CM_NAME) );
+        $moduleAlias = strtolower( $this->_getArgParam(self::PARAM_CM_ALIAS) );
+
+        if (!$moduleAlias || !$moduleName) { $this->_error(self::ERRMSG_INVALID_CM_PARAMS); }
+
+        $this->_createEtcModule($moduleName, $moduleAlias);
+        $this->_createModuleConfig($moduleName, $moduleAlias);
+
+        $this->_message(self::MESSAGE_REFRESH_XML_CACHE);
+        $this->_refreshCache(self::CACHE_TYPES_CONFIG);
+        $this->_message(self::MESSAGE_REFRESH_XML_CACHE_DONE);
+    }
+
+    private function _removeDir($dir){
+        $files = array_diff(scandir($dir), array('.','..'));
+        foreach ($files as $file) {
+            (is_dir("$dir/$file")) ? delTree("$dir/$file") : unlink("$dir/$file");
+        }
+        return rmdir($dir);
+    }
+
+    private function _processInit() {
+        $this->_testMagentoRootPath();
+        /**
+         * Set new Magento Root Path and save it
+         */
+        $this->_config->magentoRootPath = $this->_magentoRootPath;
+        $this->_saveConfig();
+    }
+
+    private function _getModuleName($type){
+        $config = Mage::getConfig();
+        $className = $config->getModelClassName($type);
+        $classInfo = explode(self::CLASS_DELIMITER, $className);
+        $moduleName = $classInfo[0].self::CLASS_DELIMITER.$classInfo[1];
+        return $moduleName;
+    }
+
+    private function _getObjectClassName(&$type, $classType){
+        $config = Mage::getConfig();
+        switch ($classType) {
+            case self::CLASS_MODEL: return $config->getModelClassName($type);
+            case self::CLASS_HELPER:
+                /**
+                 * Setting default helper class Data.php
+                 */
+                if (!preg_match('/\//', $type)) {
+                    $type .= '/data';
+                }
+                return $config->getHelperClassName($type);
+            case self::CLASS_BLOCK: return $config->getBlockClassName($type);
+            case self::CLASS_CONTROLLER:
+                $className = $config->getModelClassName($type);
+                $className = preg_replace('/'.self::CLASS_MODEL.'/',  '', $className, 1);
+                $className .= self::CLASS_CONTROLLER;
+                return $className;
+            default: return false;
+        }
+    }
+
+    private function _getClassNameDir($className) {
+        $classInfo = explode(self::CLASS_DELIMITER, $className);
+        $moduleDir = Mage::getModuleDir('', $classInfo[0].self::CLASS_DELIMITER.$classInfo[1]);
+
+        /**
+         * Hack for controller class
+         */
+        if (preg_match('/'.self::CLASS_CONTROLLER.'$/', $className)) {
+            $moduleDir .= '/controllers';
+            if ( count($classInfo) > 3  ) {
+                $moduleTypeDir = $moduleDir.'/'.$classInfo[2];
+            }
+            else {
+                $moduleTypeDir = $moduleDir;
+            }
+        }
+        else {
+            $moduleTypeDir = $moduleDir.'/'.$classInfo[2];
+        }
+
+        $this->_mkdir($moduleTypeDir);
+        for ($i = 0; $i < (count($classInfo)-1); $i++) {
+            if ($i == 0 || $i == 1 || $i == 2) { continue; }
+            $moduleTypeDir .= '/'.$classInfo[$i];
+        }
+        return $moduleTypeDir;
+    }
+
+    private function _getClassNameFile($className) {
+        $classInfo = explode(self::CLASS_DELIMITER, $className);
+        return $classInfo[count($classInfo) - 1 ].'.php';
+    }
+
+    private function _getTemplate($classType, $className) {
+        $template = '';
+        switch($classType) {
+            case self::CLASS_MODEL: $template = sprintf(self::TEMPLATE_MODEL, $className, $className); break;
+            case self::CLASS_BLOCK: $template = sprintf(self::TEMPLATE_BLOCK, $className, $className); break;
+            case self::CLASS_HELPER: $template = sprintf(self::TEMPLATE_HELPER, $className, $className); break;
+            case self::CLASS_CONTROLLER:
+                $testMethods = '';
+                $alias = $this->_getArgParam(self::PARAM_CP_ALIAS);
+                if ($this->_getArgParam(self::PARAM_COMMAND) == self::COMMAND_CREATE_PROJECT) {
+                    /**
+                     * Write extra test models for create-project command
+                     */
+                    $testMethods  = "        \$helloModel = Mage::getModel('$alias/hello');\n";
+                    $testMethods .= "        \$helloModel->hi();\n";
+                }
+                $template = sprintf(self::TEMPLATE_CONTROLLER, $className, $className, $testMethods);
+                break;
+        }
+        return $template;
+    }
+
+    private function _processCreateObject($type, $classType) {
+        try {
+            $className = $this->_getObjectClassName($type, $classType);
+            $moduleName = $this->_getModuleName($type);
+            $moduleFile = $this->_magentoRootPath.'/app/etc/modules/'.$moduleName.'.xml';
+            if (!file_exists($moduleFile)) {
+                $this->_error(self::ERRMSG_INVALID_MODULE_NAME, $moduleFile);
+            }
+            $classNameDir = $this->_getClassNameDir($className);
+            $this->_mkdir($classNameDir);
+
+            $classNameFile = $classNameDir . '/'. $this->_getClassNameFile($className);
+            $template = $this->_getTemplate($classType, $className);
+
+            /**
+             * Debug
+             *
+             */
+/*
+            var_dump($classNameFile);
+            var_dump($template);
+            */
+            $this->_createFile($classNameFile, $template);
+        }
+        catch (Exception $e) {
+            $this->_error($e->getMessage());
+        }
+    }
+
+    private function _getArgParam($index) {
+        if ($index >= count($this->_argv)) return '';
+        return $this->_argv[$index];
+    }
+
+    private function _processCreateProject(){
+        $alias = $this->_getArgParam(self::PARAM_CP_ALIAS);
+        $model = $alias.'/hello';
+        $helper = $alias;
+        $controller = $alias.'/index';
+        $this->_processCreateModule();
+
+        $this->_message(self::MESSAGE_REFRESH_CONFIG_CACHE);
+        $this->_mageConfig->cleanCache();
+        $this->_message(self::MESSAGE_REFRESH_CONFIG_CACHE_DONE);
+
+        $this->_processCreateObject($model, self::CLASS_MODEL);
+        $this->_processCreateObject($helper, self::CLASS_HELPER);
+        $this->_processCreateObject($controller, self::CLASS_CONTROLLER);
+    }
+
+    private function _processCommand() {
+        $command = $this->_getArgParam(self::PARAM_COMMAND);
+        $type = $this->_getArgParam(self::PARAM_CMD_MODULE);
+        $this->_mageConfig = Mage::getConfig();
+        switch ($command) {
+            case self::COMMAND_CREATE_MODULE: $this->_processCreateModule(); break;
+            case self::COMMAND_CREATE_MODEL: $this->_processCreateObject($type, self::CLASS_MODEL); break;
+            case self::COMMAND_CREATE_HELPER: $this->_processCreateObject($type, self::CLASS_HELPER); break;
+            case self::COMMAND_CREATE_BLOCK: $this->_processCreateObject($type, self::CLASS_BLOCK); break;
+            case self::COMMAND_CREATE_CONTROLLER: $this->_processCreateObject($type, self::CLASS_CONTROLLER); break;
+            case self::COMMAND_CREATE_PROJECT: $this->_processCreateProject(); break;
+            case self::COMMAND_INIT: $this->_processInit(); break;
+            default: $this->_error(self::ERRMSG_UNKNOWN_COMMAND, $command);
+        }
+    }
+
+    private function _init() {
+        $this->_detectHomeDir();
+        $this->_mageBuilderDir = $this->_homeDir . '/' . self::CONFIG_DIR;
+        $this->_mageBuilderFile = $this->_mageBuilderDir.'/'.self::CONFIG_FILE;
+        $this->_argv = $_SERVER['argv'];
+        $this->_argc = $_SERVER['argc'];
+        $this->_checkConfig();
+        $this->_processCommand();
+    }
+
+    public function run(){
+        $this->_init();
+    }
+
+}
+
+function main() {
+    $builder = new MageBuilder();
+    $builder->run();
+}
+
+main();
