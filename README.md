@@ -45,6 +45,11 @@ PHP script for prototyping/scaffolding Magento modules, models, controllers, and
 - $ php magebuilder.php create-helper mbuilder
 - $ php magebuilder.php create-helper mbuilder/data2
 
+#### Creating blocks
+
+- $ php magebuilder.php create-blocks mbuilder/header
+- $ php magebuilder.php create-blocks mbuilder/home_footer
+
 #### Creating contollers
 
 *This will create Test/MageBuilder/controllers/IndexController.php*
@@ -54,12 +59,6 @@ PHP script for prototyping/scaffolding Magento modules, models, controllers, and
 *This will create Test/MageBuilder/controllers/Admin/ApiController.php*
 
 > $ php magebuilder.php create-controller mbuilder/admin_api
-
-#### Creating blocks
-
-- $ php magebuilder.php create-blocks mbuilder/header
-- $ php magebuilder.php create-blocks mbuilder/home_footer
-
 
 ### Creating Project
 
