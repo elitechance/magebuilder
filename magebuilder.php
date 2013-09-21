@@ -843,7 +843,7 @@ USAGE;
             $this->_message($classFile."\n");
         }
         else {
-            $this->_error(self::ERRMSG_INVALID_CLASS_FILE, $classFile);
+            $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
         }
     }
 
@@ -858,7 +858,7 @@ USAGE;
             $this->_message($classDir."\n");
         }
         else {
-            $this->_error(self::ERRMSG_INVALID_CLASS_PATH, $classDir);
+            $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
         }
     }
 
