@@ -3,6 +3,18 @@ magebuilder
 
 PHP script for prototyping/scaffolding Magento modules, models, controllers, and blocks
 
+FEATURES
+--------
+
+1. Supports templating for Magento group types: models, helpers, controllers, and blocks
+2. Supports group type templating with custom extends
+3. Automates Magento module directory structure: etc, controllers, Model, Block, ...
+4. Supports Cache Refresh (No need for admin page)
+5. Detects class type file location
+
+Getting Started
+---------------
+
 #### Setting your Magento document root path
 > $ php magebuidler.php init /var/www/magento
 
