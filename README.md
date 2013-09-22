@@ -9,9 +9,9 @@ PHP script for prototyping/scaffolding Magento modules, models, controllers, and
 
 #### Creating module
 
-> Module Name: *Test_MageBuilder*
+> Module Name: **Test_MageBuilder**
 
-> Alias: *mbuilder*
+> Module ID: **mbuilder**
 
 This will create the following:
 
@@ -28,7 +28,7 @@ This will create the following:
 
 If you want a different code pool
 
->$ php magebuilder.php create-module test_mageBuilder mbuilder *community*
+>$ php magebuilder.php create-module test_mageBuilder mbuilder **community**
 
 
 #### Creating models
