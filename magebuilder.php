@@ -6,6 +6,8 @@
  */
 
 class MageBuilder {
+    const VERSION = '0.0.1';
+
     const TEMPLATE_MODEL = <<<TEMPLATE_MODEL_HD
 <?php
 
@@ -168,11 +170,20 @@ TEMPLATE_CONTROLLER_HD;
     const ERRMSG_INVALID_GROUP_TYPE = "Invalid group-type: [%s]\n";
     const ERRMSG_INVALID_CLASS_FILE = "Invalid class file: [%s]\n";
     const ERRMSG_INVALID_CLASS_PATH = "Invalid class path: [%s]\n";
+    const ERRMSG_SCRIPT_VERSION_LOWER = "Please upgrade your script to version >= %s\n";
 
     const ERRMSG_EXTENDING_ITSELF  = "Error: The class is extending itself: [%s]\n";
     const ERRMSG_MAGE_ROOTPATH = "Please specify Magento root path\n\n    $ magebuider init <root path>\n";
 
     const MESSAGE_VERIFY_FILE = "Are you sure you want to overwrite '%s' [y|n]? (default 'n') \n";
+    const MESSAGE_CONFIG_WITH_OLDER_VERSION = <<<MESSAGE_CONFIG_WITH_OLDER_VERSION
+You're running with an old config version.
+Config Version: %s
+Script Version: %s
+Please re-run 'magebuilder.php init' command
+
+MESSAGE_CONFIG_WITH_OLDER_VERSION;
+
 
     const MESSAGE_REFRESH_XML_CACHE = "Refreshing *.xml Cache...\n";
     const MESSAGE_REFRESH_XML_CACHE_DONE = "Refreshing *.xml Cache... Done\n";
@@ -271,7 +282,20 @@ TEMPLATE_CONTROLLER_HD;
         $this->_loadMagento();
         $this->_magentoRootPath = Mage::getBaseDir();
         $this->_config = (object) array();
+        $this->_config->version = self::VERSION;
         $this->_config->magentoRootPath = $this->_magentoRootPath;
+    }
+
+    private function _testVersion() {
+        $scriptVersion = preg_replace('/\./', '', self::VERSION);
+        $configVersion = preg_replace('/\./', '', $this->_config->version);
+        if ($scriptVersion > $configVersion) {
+            $message = sprintf(self::MESSAGE_CONFIG_WITH_OLDER_VERSION, $this->_config->version, self::VERSION);
+            $this->_error($message);
+        }
+        else if ($scriptVersion < $configVersion) {
+            $this->_error(self::ERRMSG_SCRIPT_VERSION_LOWER, $this->_config->version);
+        }
     }
 
     private function _loadConfig() {
@@ -532,12 +556,24 @@ TEMPLATE_CONTROLLER_HD;
         return rmdir($dir);
     }
 
+    private function _syncVersion(){
+        if ($this->_config->version < self::VERSION) {
+            $this->_config->version = self::VERSION;
+        }
+        else if ($this->_config->version > self::VERSION) {
+            $this->_error(self::ERRMSG_SCRIPT_VERSION_LOWER, $this->_config->version);
+        }
+    }
+
     private function _processInit() {
         $this->_testMagentoRootPath();
         /**
          * Set new Magento Root Path and save it
          */
         $this->_config->magentoRootPath = $this->_magentoRootPath;
+        if ($this->_config->version != self::VERSION) {
+            $this->_syncVersion();
+        }
         $this->_saveConfig();
     }
 
@@ -992,6 +1028,11 @@ USAGE;
         $command = $this->_getArgParam(self::PIDX_COMMAND);
         $classType = $this->_getArgParam(self::PIDX_CO_CLASS_TYPE);
         $this->_mageConfig = Mage::getConfig();
+
+        if ($command != self::COMMAND_INIT){
+            $this->_testVersion();
+        }
+
         switch ($command) {
             case self::COMMAND_CREATE_MODULE: $this->_processCreateModule(); break;
             case self::COMMAND_CREATE_MODEL: $this->_processCreateObject($classType, self::GROUP_TYPE_MODEL); break;
