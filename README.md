@@ -36,9 +36,9 @@ This will create the following:
 - app/code/local/Test/MageBuilder/Model
 - app/code/local/Test/MageBuilder/Block
 
->$ php magebuilder.php create-module test_mageBuilder mbuilder
+>$ php magebuilder.php create-module **test_mageBuilder mbuilder**
 
-If you want a different code pool
+Code pool defaults to **local**.  If you want a different code pool:
 
 >$ php magebuilder.php create-module test_mageBuilder mbuilder **community**
 
