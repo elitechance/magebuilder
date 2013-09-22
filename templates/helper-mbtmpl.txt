@@ -1,0 +1,10 @@
+<?php
+
+class {CLASS} extends {PARENT_CLASS} {
+
+    public function hi() {
+        Zend_Debug::dump("Inside {CLASS}::hi() method");
+    }
+}
+
+?>

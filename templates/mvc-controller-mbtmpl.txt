@@ -1,0 +1,12 @@
+<?php
+
+class {CLASS} extends {PARENT_CLASS} {
+
+    public function indexAction() {
+
+        Zend_Debug::dump("{CLASS} Index Action");
+{METHODS}
+    }
+}
+
+?>

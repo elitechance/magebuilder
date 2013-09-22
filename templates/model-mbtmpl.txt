@@ -1,0 +1,16 @@
+<?php
+
+class {CLASS} extends {PARENT_CLASS} {
+
+    public function _construct() {
+        /**
+         * @todo - init must go here
+         */
+    }
+
+    public function hi() {
+        Zend_Debug::dump("Inside {CLASS}::hi() method");
+    }
+}
+
+?>
