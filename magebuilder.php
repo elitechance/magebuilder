@@ -59,15 +59,28 @@ class {CLASS} extends {PARENT_CLASS} {
 ?>
 TEMPLATE_HELPER_HD;
 
-    const TEMPLATE_CONTROLLER = <<<TEMPLATE_CONTROLLER_HD
+    const TEMPLATE_MVC_CONTROLLER = <<<TEMPLATE_MVC_CONTROLLER_HD
 <?php
 
-class {CLASS} extends Mage_Core_Controller_Front_Action {
+class {CLASS} extends {PARENT_CLASS} {
 
     public function indexAction() {
 
         Zend_Debug::dump("{CLASS} Index Action");
 {METHODS}
+    }
+}
+
+?>
+TEMPLATE_MVC_CONTROLLER_HD;
+
+    const TEMPLATE_CONTROLLER = <<<TEMPLATE_CONTROLLER_HD
+<?php
+
+class {CLASS} extends {PARENT_CLASS} {
+
+    public function hi() {
+        Zend_Debug::dump("Inside {CLASS}::hi() method");
     }
 }
 
@@ -171,6 +184,7 @@ TEMPLATE_CONTROLLER_HD;
     const COMMAND_CREATE_HELPER = 'create-helper';
     const COMMAND_CREATE_BLOCK = 'create-block';
     const COMMAND_CREATE_CONTROLLER = 'create-controller';
+    const COMMAND_CREATE_MVC_CONTROLLER = 'create-mvc-controller';
     const COMMAND_CREATE_PROJECT = 'create-project';
     const COMMAND_CHECK_PATH = 'check-path';
     const COMMAND_CHECK_CLASS_PATH = 'check-class';
@@ -527,32 +541,41 @@ TEMPLATE_CONTROLLER_HD;
         $this->_saveConfig();
     }
 
-    private function _getModuleName($type){
-        $config = Mage::getConfig();
-        $className = $config->getModelClassName($type);
+    private function _getModuleNameByClassType($type){
+        $className = $this->_mageConfig->getModelClassName($type);
         $classInfo = explode(self::CLASS_DELIMITER, $className);
         $moduleName = $classInfo[0].self::CLASS_DELIMITER.$classInfo[1];
         return $moduleName;
     }
 
-    private function _getObjectClassName(&$classType, $groupType){
-        $config = Mage::getConfig();
+    private function _getHelperDefaultClassType($classType) {
+        if (!preg_match('/\//', $classType)) {
+            /**
+             * Setting default helper class Data.php
+             */
+            $classType .= '/data';
+        }
+        return $classType;
+    }
+
+    private function _getControllerClassName($classType) {
+        $className = $this->_mageConfig->getModelClassName($classType);
+        $className = preg_replace('/'.self::GROUP_TYPE_MODEL.'/', self::GROUP_TYPE_CONTROLLER, $className, 1);
+        return $className;
+    }
+
+    private function _getHelperClassName($classType) {
+        $classType = $this->_getHelperDefaultClassType($classType);
+        $className = $this->_mageConfig->getHelperClassName($classType);
+        return $className;
+    }
+
+    private function _getObjectClassName($classType, $groupType){
         switch ($groupType) {
-            case self::GROUP_TYPE_MODEL: return $config->getModelClassName($classType);
-            case self::GROUP_TYPE_HELPER:
-                /**
-                 * Setting default helper class Data.php
-                 */
-                if (!preg_match('/\//', $classType)) {
-                    $classType .= '/data';
-                }
-                return $config->getHelperClassName($classType);
-            case self::GROUP_TYPE_BLOCK: return $config->getBlockClassName($classType);
-            case self::GROUP_TYPE_CONTROLLER:
-                $className = $config->getModelClassName($classType);
-                $className = preg_replace('/'.self::CLASS_DELIMITER.self::GROUP_TYPE_MODEL.'/',  '', $className, 1);
-                $className .= self::GROUP_TYPE_CONTROLLER;
-                return $className;
+            case self::GROUP_TYPE_MODEL: return $this->_mageConfig->getModelClassName($classType);
+            case self::GROUP_TYPE_HELPER: return $this->_getHelperClassName($classType);
+            case self::GROUP_TYPE_BLOCK: return $this->_mageConfig->getBlockClassName($classType);
+            case self::GROUP_TYPE_CONTROLLER: return $this->_getControllerClassName($classType);
             default: return false;
         }
     }
@@ -560,33 +583,50 @@ TEMPLATE_CONTROLLER_HD;
     private function _getClassNameDir($className) {
         $classInfo = explode(self::CLASS_DELIMITER, $className);
         $moduleDir = Mage::getModuleDir('', $classInfo[0].self::CLASS_DELIMITER.$classInfo[1]);
+        $classPath = $moduleDir;
 
-        /**
-         * Hack for controller class
-         */
-        if (preg_match('/'.self::GROUP_TYPE_CONTROLLER.'$/', $className)) {
-            $moduleDir .= '/controllers';
-            if ( count($classInfo) > 3  ) {
-                $moduleTypeDir = $moduleDir.'/'.$classInfo[2];
-            }
-            else {
-                $moduleTypeDir = $moduleDir;
-            }
+        for ($i = 0; $i < (count($classInfo) - 1); $i++) {
+            if ($i == 0 || $i == 1 ) { continue; }
+            $classPath .= '/'.$classInfo[$i];
         }
-        else {
-            $moduleTypeDir = $moduleDir.'/'.$classInfo[2];
-        }
-
-        for ($i = 0; $i < (count($classInfo)-1); $i++) {
-            if ($i == 0 || $i == 1 || $i == 2) { continue; }
-            $moduleTypeDir .= '/'.$classInfo[$i];
-        }
-        return $moduleTypeDir;
+        return $classPath;
     }
 
     private function _getClassNameFile($className) {
         $classInfo = explode(self::CLASS_DELIMITER, $className);
         return $classInfo[count($classInfo) - 1 ].'.php';
+    }
+
+    private function _arrayInsert(&$array, $element, $position=null) {
+        if (count($array) == 0) {
+            $array[] = $element;
+        }
+        elseif (is_numeric($position) && $position < 0) {
+            if((count($array)+$position) < 0) {
+                $array = $this->_arrayInsert($array,$element,0);
+            }
+            else {
+                $array[count($array)+$position] = $element;
+            }
+        }
+        elseif (is_numeric($position) && isset($array[$position])) {
+            $part1 = array_slice($array,0,$position,true);
+            $part2 = array_slice($array,$position,null,true);
+            $array = array_merge($part1,array($position=>$element),$part2);
+            foreach($array as $key => $item) {
+                if (is_null($item)) {
+                    unset($array[$key]);
+                }
+            }
+        }
+        elseif (is_null($position)) {
+            $array[] = $element;
+        }
+        elseif (!isset($array[$position])) {
+            $array[$position] = $element;
+        }
+        $array = array_merge($array);
+        return $array;
     }
 
     private function _getParentClassType($childClassName){
@@ -607,14 +647,16 @@ TEMPLATE_CONTROLLER_HD;
 
         $command = $this->_getArgParam(self::PIDX_COMMAND);
 
-
         switch($command) {
             case self::COMMAND_CREATE_MODEL: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_MODEL); break;
             case self::COMMAND_CREATE_HELPER: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_HELPER); break;
             case self::COMMAND_CREATE_BLOCK: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_BLOCK); break;
-            case self::COMMAND_CREATE_CONTROLLER:  $this->_error("@todo - support controller custom extend\n"); break;
+            case self::COMMAND_CREATE_CONTROLLER: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_CONTROLLER); break;
+            case self::COMMAND_CREATE_MVC_CONTROLLER: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_CONTROLLER); break;
         }
+
         $ok = class_exists($parentClassName);
+
         if (!$ok) {
             $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
         }
@@ -687,13 +729,40 @@ TEMPLATE_CONTROLLER_HD;
      * @param string $className
      * @return mixed
      */
-    private function _getControllerTemplate($className = '') {
+    private function _getControllerTemplate($className) {
+        $parent = 'Mage_Core_Controller_Front_Action';
+
+        $customParent = $this->_getParentClassType($className);
+
+        if ($customParent) {
+            $parent = $customParent;
+        }
+
         $template = self::TEMPLATE_CONTROLLER;
         $template = preg_replace('/{CLASS}/', $className, $template);
+        $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
+
+        return $template;
+    }
+
+    /**
+     * @param string $className
+     * @return string
+     */
+    private function _getMvcControllerTemplate($className) {
+        $parent = 'Mage_Core_Controller_Front_Action';
+
+        $customParent = $this->_getParentClassType($className);
+
+        if ($customParent) {
+            $parent = $customParent;
+        }
+
+        $template = self::TEMPLATE_MVC_CONTROLLER;
 
         $testMethods = '';
-        $alias = $this->_getArgParam(self::PIDX_CP_ALIAS);
         if ($this->_getArgParam(self::PIDX_COMMAND) == self::COMMAND_CREATE_PROJECT) {
+            $alias = $this->_getArgParam(self::PIDX_CP_ALIAS);
             $testMethods = <<<TEST_METHODS
         \$helloModel = Mage::getModel('$alias/hello');
         \$helloModel->hi();
@@ -703,6 +772,8 @@ TEMPLATE_CONTROLLER_HD;
 TEST_METHODS;
         }
 
+        $template = preg_replace('/{CLASS}/', $className, $template);
+        $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
         $template = preg_replace('/{METHODS}/', $testMethods, $template);
         return $template;
     }
@@ -718,14 +789,36 @@ TEST_METHODS;
         return $template;
     }
 
+    /**
+     * @param string $classType
+     * @return bool
+     */
+    private function _isModuleExistsByClassType($classType) {
+        $moduleName = $this->_getModuleNameByClassType($classType);
+        $moduleFile = $this->_magentoRootPath.'/app/etc/modules/'.$moduleName.'.xml';
+        if (file_exists($moduleFile)) {
+            return true;
+        }
+        return false;
+    }
+
+    protected function _testModuleName($classType) {
+        $moduleExists = $this->_isModuleExistsByClassType($classType);
+        $moduleName = $this->_getModuleNameByClassType($classType);
+
+        if (!$moduleExists) {
+            $this->_error(self::ERRMSG_INVALID_MODULE_NAME, $moduleName);
+        }
+    }
+
     private function _processCreateObject($classType, $groupType) {
         try {
-            $className = $this->_getObjectClassName($classType, $groupType);
-            $moduleName = $this->_getModuleName($classType);
-            $moduleFile = $this->_magentoRootPath.'/app/etc/modules/'.$moduleName.'.xml';
-            if (!file_exists($moduleFile)) {
-                $this->_error(self::ERRMSG_INVALID_MODULE_NAME, $moduleFile);
+            if ($groupType == self::GROUP_TYPE_HELPER) {
+                $classType = $this->_getHelperDefaultClassType($classType);
             }
+            $this->_testModuleName($classType);
+
+            $className = $this->_getObjectClassName($classType, $groupType);
             $classNameDir = $this->_getClassNameDir($className);
             $this->_mkdir($classNameDir);
 
@@ -747,6 +840,39 @@ TEST_METHODS;
         }
     }
 
+    private function _logger($object){
+        var_dump($object);
+    }
+
+    private function _processCreateMvcController($classType){
+        $this->_testModuleName($classType);
+
+        /**
+         * Hack MVC controller name
+         * i.e., Test_MageBuilder_Controller_Index --> Test_MageBuilder_IndexController
+         */
+        $className = $this->_getObjectClassName($classType, self::GROUP_TYPE_CONTROLLER);
+        $className = preg_replace('/'.self::CLASS_DELIMITER.self::GROUP_TYPE_CONTROLLER.'/', '', $className);
+        $className .= self::GROUP_TYPE_CONTROLLER;
+
+        /**
+         * Hack MVC controller directory path
+         * i.e., Test/MageBuilder/IndexController --> Test/MageBuilder/controllers/IndexController
+         */
+        $classNameDir = $this->_getClassNameDir($className);
+        $moduleName = $this->_getModuleNameByClassType($classType);
+        $moduleNameDir = Mage::getModuleDir('', $moduleName);
+        $escapedModuleNameDir = addcslashes($moduleNameDir, '/');
+        $classNameDir = preg_replace('/'.$escapedModuleNameDir.'/', $moduleNameDir.'/controllers', $classNameDir);
+
+        $this->_mkdir($classNameDir);
+        $classNameFile = $this->_getClassNameFile($className);
+        $classFilePath = $classNameDir.'/'.$classNameFile;
+
+        $template = $this->_getMvcControllerTemplate($className);
+        $this->_createFile($classFilePath, $template);
+    }
+
     private function _getArgParam($index) {
         if ($index >= count($this->_argv)) return '';
         return $this->_argv[$index];
@@ -765,7 +891,7 @@ TEST_METHODS;
 
         $this->_processCreateObject($model, self::GROUP_TYPE_MODEL);
         $this->_processCreateObject($helper, self::GROUP_TYPE_HELPER);
-        $this->_processCreateObject($controller, self::GROUP_TYPE_CONTROLLER);
+        $this->_processCreateMvcController($controller);
     }
 
     private function _usage(){
@@ -853,8 +979,8 @@ USAGE;
 
         $classDir = $this->_getPathByGroupTypeAndClassType($classType, $groupType);
 
-        $result = file_exists($classDir);
-        if (file_exists($classDir)) {
+        $ok = file_exists($classDir);
+        if ($ok) {
             $this->_message($classDir."\n");
         }
         else {
@@ -872,6 +998,7 @@ USAGE;
             case self::COMMAND_CREATE_HELPER: $this->_processCreateObject($classType, self::GROUP_TYPE_HELPER); break;
             case self::COMMAND_CREATE_BLOCK: $this->_processCreateObject($classType, self::GROUP_TYPE_BLOCK); break;
             case self::COMMAND_CREATE_CONTROLLER: $this->_processCreateObject($classType, self::GROUP_TYPE_CONTROLLER); break;
+            case self::COMMAND_CREATE_MVC_CONTROLLER: $this->_processCreateMvcController($classType); break;
             case self::COMMAND_CREATE_PROJECT: $this->_processCreateProject(); break;
             case self::COMMAND_INIT: $this->_processInit(); break;
             case self::COMMAND_CHECK_PATH: $this->_processCheckPath(); break;
