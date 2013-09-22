@@ -100,7 +100,7 @@ Extending custom class
 
 This is shortcut for:
 
- $ php magebuilder.php create-module test_project testprj
+- $ php magebuilder.php create-module test_project testprj
 - $ php magebuilder.php create-model testprj/hello
 - $ php magebuilder.php create-helper testprj
 - $ php magebuilder.php create-controller testprj/index
