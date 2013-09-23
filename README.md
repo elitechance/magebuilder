@@ -11,13 +11,13 @@ FEATURES
 3. Automates Magento module directory structure: etc, controllers, Model, Block, ...
 4. Supports Cache Refresh (No need for admin page)
 5. Detects class type file location
+6. Supports adding event listener
 
 Getting Started
 ---------------
 
-#### Setting your Magento document root path
+#### Setting Magento root path
 > $ php magebuidler.php init /var/www/magento
-
 
 #### Creating module
 
@@ -38,7 +38,7 @@ This will create the following:
 
 >$ php magebuilder.php create-module **test_mageBuilder mbuilder**
 
-Code pool defaults to **local**.  If you want a different code pool:
+By default, code pool is set to **local**.  If you want specify a different code pool:
 
 >$ php magebuilder.php create-module test_mageBuilder mbuilder **community**
 
@@ -79,7 +79,7 @@ This will create Test/MageBuilder/Controller/Api/Abstract.php
 
 This will create Test/MageBuilder/controllers/IndexController.php
 
-> $ php magebuilder.php create-mvc-controller mbuilder/index
+> $ php magebuilder.php create-mvcontroller mbuilder/index
 
 This will create Test/MageBuilder/controllers/Admin/ApiController.php
 
@@ -87,7 +87,7 @@ This will create Test/MageBuilder/controllers/Admin/ApiController.php
 
 #### Extending custom class
 
-This will produce the same model class
+This will create the same model class
 
 > $ php magebuilder.php create-model mbuilder/model
 

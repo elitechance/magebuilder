@@ -1,93 +1,13 @@
 <?php
 /**
- * User: Ethan Dave Gomez
- * Date: 9/18/13
- * Time: 4:29 PM
+ * User: Ethan Dave B. Gomez
+ * License: GPLv2
  */
 
+require_once('Zend/Http/Client.php');
+
 class MageBuilder {
-    const VERSION = '0.0.1';
-
-    const TEMPLATE_MODEL = <<<TEMPLATE_MODEL_HD
-<?php
-
-class {CLASS} extends {PARENT_CLASS} {
-
-    public function _construct() {
-        /**
-         * @todo - init must go here
-         */
-    }
-
-    public function hi() {
-        Zend_Debug::dump("Inside {CLASS}::hi() method");
-    }
-}
-
-?>
-TEMPLATE_MODEL_HD;
-
-    const TEMPLATE_BLOCK = <<<TEMPLATE_BLOCK_HD
-<?php
-
-class {CLASS} extends {PARENT_CLASS} {
-
-    public function _construct() {
-        /**
-         * @todo - init must go here
-         */
-    }
-
-    public function hi() {
-        Zend_Debug::dump("Inside {CLASS}::hi() method");
-    }
-}
-
-?>
-TEMPLATE_BLOCK_HD;
-
-
-    const TEMPLATE_HELPER = <<<TEMPLATE_HELPER_HD
-<?php
-
-class {CLASS} extends {PARENT_CLASS} {
-
-    public function hi() {
-        Zend_Debug::dump("Inside {CLASS}::hi() method");
-    }
-
-}
-
-?>
-TEMPLATE_HELPER_HD;
-
-    const TEMPLATE_MVC_CONTROLLER = <<<TEMPLATE_MVC_CONTROLLER_HD
-<?php
-
-class {CLASS} extends {PARENT_CLASS} {
-
-    public function indexAction() {
-
-        Zend_Debug::dump("{CLASS} Index Action");
-{METHODS}
-    }
-}
-
-?>
-TEMPLATE_MVC_CONTROLLER_HD;
-
-    const TEMPLATE_CONTROLLER = <<<TEMPLATE_CONTROLLER_HD
-<?php
-
-class {CLASS} extends {PARENT_CLASS} {
-
-    public function hi() {
-        Zend_Debug::dump("Inside {CLASS}::hi() method");
-    }
-}
-
-?>
-TEMPLATE_CONTROLLER_HD;
+    const VERSION = '0.0.2';
 
     const CACHE_TYPES_BLOCK_HTML = 'block_html';
     const CACHE_TYPES_COLLECTIONS = 'collections';
@@ -99,8 +19,13 @@ TEMPLATE_CONTROLLER_HD;
     const CACHE_TYPES_LAYOUT = 'layout';
     const CACHE_TYPES_TRANSLATE = 'translate';
 
+    const GITHUB_TEMPLATES_URL = 'https://raw.github.com/elitechance/magebuilder/master/templates';
+
     const CONFIG_DIR = '.magebuilder';
     const CONFIG_FILE = 'config.json';
+    const CONFIG_LIB_DIR = 'lib';
+    const CONFIG_TEMPLATE_DIR = 'templates';
+    const CONFIG_TEMPLATE_FILE_SUFFIX = '-mbtmpl.txt';
 
     const CODEPOOL_COMMUNITY = 'community';
     const CODEPOOL_CORE = 'core';
@@ -110,6 +35,7 @@ TEMPLATE_CONTROLLER_HD;
     const GROUP_TYPE_BLOCK = 'Block';
     const GROUP_TYPE_HELPER = 'Helper';
     const GROUP_TYPE_CONTROLLER = 'Controller';
+    const GROUP_TYPE_MVCONTROLLER = 'Mvcontroller';
     const CLASS_DELIMITER = '_';
 
     /**
@@ -122,7 +48,6 @@ TEMPLATE_CONTROLLER_HD;
     const PIDX_CM_ALIAS = 3;
     const PIDX_CM_CODEPOOL = 4;
 
-
     /**
      * PIDX_CMD_MODULE - Create Model Module
      */
@@ -131,7 +56,6 @@ TEMPLATE_CONTROLLER_HD;
 
     const PIDX_COMMAND = 1;
     const PIDX_EXTENDS = 3;
-    const PVAL_EXTENDS = 'extends';
     const PIDX_PARENT_CLASS = 4;
     const PIDX_INIT = 1;
     const PIDX_ROOT_PATH = 2;
@@ -158,32 +82,56 @@ TEMPLATE_CONTROLLER_HD;
     const PIDX_CP_MODULE = 2;
     const PIDX_CP_ALIAS = 3;
 
+    /**
+     * (LT) Listen To
+     */
+    const PIDX_LT_EVENT = 2;
+    const PIDX_LT_CLASS_TYPE = 3;
+    const PIDX_LT_METHOD = 4;
+
+    const PVAL_EXTENDS = 'extends';
+
     const ERRMSG_CREATE_FILE = "Unable to create file: '%s'\n";
     const ERRMSG_CREATE_DIR = "Unable to create dir: [%s]\n";
 
     const ERRMSG_INVALID_ROOTPATH = "Please specify a valid Magento root path: '%s'\n";
-    const ERRMSG_UNKNOWN_COMMAND = "Unknown Command: [%s]\n";
     const ERRMSG_INVALID_CM_PARAMS = "Please specify name and alias.\n\n    $ magebuilder create-module <module name> <alias>\n";
     const ERRMSG_INVALID_CODEPOOL = "Invalid Code Pool: '%s'\n    $ magebuilder create-module <module name> <alias> [core|community|local]\n";
-    const ERRMSG_INVALID_MODULE_NAME = "Module name does not exists [%s].\n\n    Hint:\n    $ magebuider create-module <module name> <alias>\n";
+    const ERRMSG_INVALID_MODULE_NAME = <<<ERRMSG_INVALID_MODULE_NAME_HD
+Module name does not exists [%s].
+    Hint:
+        $ magebuider create-module <module name> <alias>
+
+ERRMSG_INVALID_MODULE_NAME_HD;
+
     const ERRMSG_INVALID_CLASS_TYPE = "Invalid class-type: [%s]\n";
-    const ERRMSG_INVALID_GROUP_TYPE = "Invalid group-type: [%s]\n";
+    const ERRMSG_INVALID_GROUP_TYPE = <<<ERRMSG_INVALID_GROUP_TYPE_HD
+Invalid group-type: [%s].
+Please specify <model|helper|block|controller|mvcontroller>
+
+ERRMSG_INVALID_GROUP_TYPE_HD;
+
     const ERRMSG_INVALID_CLASS_FILE = "Invalid class file: [%s]\n";
     const ERRMSG_INVALID_CLASS_PATH = "Invalid class path: [%s]\n";
+
+    const ERRMSG_OBSERVER_EXISTS = "Observer already exists\n";
     const ERRMSG_SCRIPT_VERSION_LOWER = "Please upgrade your script to version >= %s\n";
-
+    const ERRMSG_UNKNOWN_COMMAND = "Unknown Command: [%s].  Use command below for details.\n$ php magebuilder.php help\n" ;
     const ERRMSG_EXTENDING_ITSELF  = "Error: The class is extending itself: [%s]\n";
-    const ERRMSG_MAGE_ROOTPATH = "Please specify Magento root path\n\n    $ magebuider init <root path>\n";
+    const ERRMSG_MAGE_ROOTPATH = "Please specify Magento root path\n\n    $ php magebuider.php init <root path>\n";
 
+    const MESSAGE_DOWNLOADING_TEMPLATES = "Downloading templates...\n";
+    const MESSAGE_DOWNLOADING_TEMPLATES_DONE = "Downloading templates done.\n";
     const MESSAGE_VERIFY_FILE = "Are you sure you want to overwrite '%s' [y|n]? (default 'n') \n";
+    const MESSAGE_VERIFY_UNKNOWN_CLASS = "Unknown class-type [%s].  Do you want to continue [y|n]? (default 'n')\n";
+    const MESSAGE_VERIFY_UNKNOWN_CLASS_METHOD = "Unknown class method [%s::%s()].  Do you want to continue [y|n]? (default 'n')\n";
     const MESSAGE_CONFIG_WITH_OLDER_VERSION = <<<MESSAGE_CONFIG_WITH_OLDER_VERSION
-You're running with an old config version.
+You're running with an older config version.
 Config Version: %s
 Script Version: %s
-Please re-run 'magebuilder.php init' command
+Upgrading ...
 
 MESSAGE_CONFIG_WITH_OLDER_VERSION;
-
 
     const MESSAGE_REFRESH_XML_CACHE = "Refreshing *.xml Cache...\n";
     const MESSAGE_REFRESH_XML_CACHE_DONE = "Refreshing *.xml Cache... Done\n";
@@ -195,11 +143,19 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
     const COMMAND_CREATE_HELPER = 'create-helper';
     const COMMAND_CREATE_BLOCK = 'create-block';
     const COMMAND_CREATE_CONTROLLER = 'create-controller';
-    const COMMAND_CREATE_MVC_CONTROLLER = 'create-mvc-controller';
+    const COMMAND_CREATE_MVCONTROLLER = 'create-mvcontroller';
     const COMMAND_CREATE_PROJECT = 'create-project';
+
     const COMMAND_CHECK_PATH = 'check-path';
     const COMMAND_CHECK_CLASS_PATH = 'check-class';
+
+    const COMMAND_LISTEN_TO = 'listen-to';
+
     const COMMAND_INIT = 'init';
+
+    const COMMAND_HELP = 'help';
+    const COMMAND_HELP_ = '-help';
+    const COMMAND_HELP__ = '--help';
 
     /**
      * @var string
@@ -246,6 +202,11 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
      */
     protected $_mageConfig;
 
+    /**
+     * @var Zend_Http_Client
+     */
+    protected $_httpClient;
+
     private function _error($message) {
         $args = func_get_args();
         switch(count($args)) {
@@ -291,7 +252,8 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
         $configVersion = preg_replace('/\./', '', $this->_config->version);
         if ($scriptVersion > $configVersion) {
             $message = sprintf(self::MESSAGE_CONFIG_WITH_OLDER_VERSION, $this->_config->version, self::VERSION);
-            $this->_error($message);
+            $this->_message($message);
+            $this->_syncVersion();
         }
         else if ($scriptVersion < $configVersion) {
             $this->_error(self::ERRMSG_SCRIPT_VERSION_LOWER, $this->_config->version);
@@ -314,11 +276,38 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
         fclose($fp);
     }
 
-    private function _createMageBuilderDir(){
-        $ok = $this->_mkdir($this->_mageBuilderDir);
-        if (!$ok) {
-            $this->_error(self::ERRMSG_CREATE_DIR, $this->_homeDir);
-        }
+    private function _createMageBuilderConfigDir() {
+        $this->_mkdir($this->_mageBuilderDir, true);
+        $this->_mkdir($this->_mageBuilderDir.'/'.self::CONFIG_LIB_DIR, true);
+        $this->_mkdir($this->_mageBuilderDir.'/'.self::CONFIG_TEMPLATE_DIR, true);
+    }
+
+    private function _getTemplateFilePath($groupType){
+        $groupType = strtolower($groupType);
+        $templateFile = $groupType.self::CONFIG_TEMPLATE_FILE_SUFFIX;
+        $templateFilePath = $this->_mageBuilderDir.'/'. self::CONFIG_TEMPLATE_DIR.'/'.$templateFile;
+        return $templateFilePath;
+    }
+
+    private function _downloadTemplate($groupType){
+        $groupType = strtolower($groupType);
+        $templateFile = $groupType.self::CONFIG_TEMPLATE_FILE_SUFFIX;
+        $uri = self::GITHUB_TEMPLATES_URL.'/'.$templateFile;
+        $this->_httpClient->setUri($uri);
+        $response = $this->_httpClient->request(Zend_Http_Client::GET);
+        $templateFilePath = $this->_getTemplateFilePath($groupType);
+        $content = $response->getBody();
+        $this->_createFile($templateFilePath, $content);
+    }
+
+    private function _downloadTemplates() {
+        $this->_message(self::MESSAGE_DOWNLOADING_TEMPLATES);
+        $this->_downloadTemplate(self::GROUP_TYPE_MODEL);
+        $this->_downloadTemplate(self::GROUP_TYPE_BLOCK);
+        $this->_downloadTemplate(self::GROUP_TYPE_HELPER);
+        $this->_downloadTemplate(self::GROUP_TYPE_CONTROLLER);
+        $this->_downloadTemplate(self::GROUP_TYPE_MVCONTROLLER);
+        $this->_message(self::MESSAGE_DOWNLOADING_TEMPLATES_DONE);
     }
 
     protected function _checkConfig() {
@@ -327,8 +316,8 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
                 $this->_error(self::ERRMSG_MAGE_ROOTPATH);
             }
             $this->_checkInitialMagentoRootPath();
-            $this->_createMageBuilderDir();
-
+            $this->_createMageBuilderConfigDir();
+            $this->_downloadTemplates();
             $this->_saveConfig();
             exit;
         }
@@ -415,14 +404,20 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
         echo $message;
     }
 
+    /**
+     * @param string $path
+     * @param string $content
+     * @param bool $check
+     * @return bool Returns true if the file is created successfully
+     */
     private function _createFile($path, $content, $check = true){
         if ($check) {
             if (file_exists($path)) {
                 $response = $this->_verify(sprintf(self::MESSAGE_VERIFY_FILE, $path));
 
-                if (!$response) { $response = 'n'; }
+                if (!$response) { return false; }
 
-                if ($response == 'n') {return;}
+                if ($response == 'n') {return false;}
             }
         }
 
@@ -432,8 +427,15 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
             $this->_error(self::ERRMSG_CREATE_FILE, $path);
         }
 
-        fwrite($fp, $content);
+        $contentLen = strlen($content);
+
+        $writtenLen = fwrite($fp, $content, $contentLen);
+
+        if ($writtenLen != $contentLen) {
+            return false;
+        }
         fclose($fp);
+        return true;
     }
 
     private function _readLn() {
@@ -463,10 +465,22 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
 
         $this->_codePool = $codePool;
         $moduleXml->modules->{$moduleName}->codePool = $codePool;
-        $dom = dom_import_simplexml($moduleXml)->ownerDocument;
-        $dom->formatOutput = true;
         $moduleFile = $this->_magentoRootPath . '/app/etc/modules/'.$moduleName.'.xml';
-        $this->_createFile($moduleFile, $dom->saveXML());
+        $formattedXml = $this->_getFormattedXmlFromSimpleXML($moduleXml);
+        $this->_createFile($moduleFile, $formattedXml);
+    }
+
+    /**
+     * @param SimpleXMLElement $simpleXml
+     * @return string
+     */
+    private function _getFormattedXmlFromSimpleXML($simpleXml){
+        $xmlOutput = $simpleXml->asXML();
+        $dom = new DOMDocument();
+        $dom->preserveWhiteSpace = false;
+        $dom->formatOutput = true;
+        $dom->loadXML($xmlOutput);
+        return $dom->saveXML();
     }
 
     private function _createModuleConfig($moduleName, $moduleAlias){
@@ -474,18 +488,19 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
         $moduleConfigXml->addChild('modules')->addChild($moduleName)->addChild('version');
         $moduleConfigXml->modules->{$moduleName}->version = '0.0.1';
 
-        $global = $moduleConfigXml->children('global');
-        if (!$global) { $moduleConfigXml->addChild('global'); }
+        $this->_addGlobalToModuleConfig($moduleConfigXml);
 
+        /**
+         * @todo - Make these functions reusable ------------------------------/
+         *      These functions assume the you're creating the config from scratch
+         */
         $this->_addModuleBlocks($moduleConfigXml, $moduleName, $moduleAlias);
         $this->_addModuleModels($moduleConfigXml, $moduleName, $moduleAlias);
         $this->_addModuleHelpers($moduleConfigXml, $moduleName, $moduleAlias);
         $this->_addModuleResources($moduleConfigXml, $moduleName, $moduleAlias);
         $this->_addModuleFrontend($moduleConfigXml, $moduleName, $moduleAlias);
         $this->_addModuleLayout($moduleConfigXml, $moduleName, $moduleAlias);
-
-        $dom = dom_import_simplexml($moduleConfigXml)->ownerDocument;
-        $dom->formatOutput = true;
+        /*---------------------------------------------------------------------*/
 
         $moduleNameInfo = explode(self::CLASS_DELIMITER, $moduleName);
         $moduleDir = $this->_magentoRootPath.'/app/code/'.$this->_codePool.'/'.$moduleNameInfo[0].'/'.$moduleNameInfo[1];
@@ -499,7 +514,8 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
         $this->_mkdir($moduleDir.'/sql/'.$moduleAlias.'_setup');
 
         $moduleConfigFile = $moduleDir.'/etc/config.xml';
-        $this->_createFile($moduleConfigFile, $dom->saveXML());
+        $formattedXml = $this->_getFormattedXmlFromSimpleXML($moduleConfigXml);
+        $this->_createFile($moduleConfigFile, $formattedXml);
     }
 
     private function _mkdir($dir, $checkError = false) {
@@ -514,6 +530,8 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
     protected function _refreshCache($cacheType = null) {
         try {
             /**
+             * Note: Some typo in the documentation of Mage::app()->useCache() method.
+             *      It says that useCache() method returns boolean instead of an array or mixed.
              * @var array $allTypes
              */
             $allTypes = Mage::app()->useCache();
@@ -558,7 +576,12 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
 
     private function _syncVersion(){
         if ($this->_config->version < self::VERSION) {
+            if ($this->version <= '0.0.1') {
+                $this->_createMageBuilderConfigDir();
+                $this->_downloadTemplates();
+            }
             $this->_config->version = self::VERSION;
+            $this->_saveConfig();
         }
         else if ($this->_config->version > self::VERSION) {
             $this->_error(self::ERRMSG_SCRIPT_VERSION_LOWER, $this->_config->version);
@@ -567,13 +590,7 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
 
     private function _processInit() {
         $this->_testMagentoRootPath();
-        /**
-         * Set new Magento Root Path and save it
-         */
         $this->_config->magentoRootPath = $this->_magentoRootPath;
-        if ($this->_config->version != self::VERSION) {
-            $this->_syncVersion();
-        }
         $this->_saveConfig();
     }
 
@@ -616,6 +633,10 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
         }
     }
 
+    /**
+     * @param $className
+     * @return string
+     */
     private function _getClassNameDir($className) {
         $classInfo = explode(self::CLASS_DELIMITER, $className);
         $moduleDir = Mage::getModuleDir('', $classInfo[0].self::CLASS_DELIMITER.$classInfo[1]);
@@ -688,7 +709,7 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
             case self::COMMAND_CREATE_HELPER: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_HELPER); break;
             case self::COMMAND_CREATE_BLOCK: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_BLOCK); break;
             case self::COMMAND_CREATE_CONTROLLER: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_CONTROLLER); break;
-            case self::COMMAND_CREATE_MVC_CONTROLLER: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_CONTROLLER); break;
+            case self::COMMAND_CREATE_MVCONTROLLER: $parentClassName = $this->_getObjectClassName($classType, self::GROUP_TYPE_CONTROLLER); break;
         }
 
         $ok = class_exists($parentClassName);
@@ -704,6 +725,17 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
         return $parentClassName;
     }
 
+    private function _getTemplateContent($groupType) {
+        $templateFilePath = $this->_getTemplateFilePath($groupType);
+        $fp = fopen($templateFilePath, "r");
+        $content = '';
+        while ($data = fgets($fp)) {
+            $content .= $data;
+        }
+        fclose($fp);
+        return $content;
+    }
+
     /**
      * @param string $className
      * @return string
@@ -717,7 +749,7 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
             $parent = $customParent;
         }
 
-        $template = self::TEMPLATE_MODEL;
+        $template = $this->_getTemplateContent(self::GROUP_TYPE_MODEL);
         $template = preg_replace('/{CLASS}/', $className, $template);
         $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
         return $template;
@@ -736,7 +768,7 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
             $parent = $customParent;
         }
 
-        $template = self::TEMPLATE_BLOCK;
+        $template = $this->_getTemplateContent(self::GROUP_TYPE_BLOCK);
         $template = preg_replace('/{CLASS}/', $className, $template);
         $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
         return $template;
@@ -755,7 +787,7 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
             $parent = $customParent;
         }
 
-        $template = self::TEMPLATE_HELPER;
+        $template = $this->_getTemplateContent(self::GROUP_TYPE_HELPER);
         $template = preg_replace('/{CLASS}/', $className, $template);
         $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
         return $template;
@@ -774,7 +806,7 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
             $parent = $customParent;
         }
 
-        $template = self::TEMPLATE_CONTROLLER;
+        $template = $this->_getTemplateContent(self::GROUP_TYPE_CONTROLLER);
         $template = preg_replace('/{CLASS}/', $className, $template);
         $template = preg_replace('/{PARENT_CLASS}/', $parent, $template);
 
@@ -794,7 +826,7 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
             $parent = $customParent;
         }
 
-        $template = self::TEMPLATE_MVC_CONTROLLER;
+        $template = $this->_getTemplateContent(self::GROUP_TYPE_MVCONTROLLER);
 
         $testMethods = '';
         if ($this->_getArgParam(self::PIDX_COMMAND) == self::COMMAND_CREATE_PROJECT) {
@@ -847,6 +879,12 @@ TEST_METHODS;
         }
     }
 
+    private function _getClassNameFilePath($className) {
+        $classNameDir = $this->_getClassNameDir($className);
+        $classNameFile = $classNameDir . '/'. $this->_getClassNameFile($className);
+        return $classNameFile;
+    }
+
     private function _processCreateObject($classType, $groupType) {
         try {
             if ($groupType == self::GROUP_TYPE_HELPER) {
@@ -880,9 +918,7 @@ TEST_METHODS;
         var_dump($object);
     }
 
-    private function _processCreateMvcController($classType){
-        $this->_testModuleName($classType);
-
+    private function _getMvcControllerClassName($classType) {
         /**
          * Hack MVC controller name
          * i.e., Test_MageBuilder_Controller_Index --> Test_MageBuilder_IndexController
@@ -890,7 +926,15 @@ TEST_METHODS;
         $className = $this->_getObjectClassName($classType, self::GROUP_TYPE_CONTROLLER);
         $className = preg_replace('/'.self::CLASS_DELIMITER.self::GROUP_TYPE_CONTROLLER.'/', '', $className);
         $className .= self::GROUP_TYPE_CONTROLLER;
+        return $className;
+    }
 
+    /**
+     * @param string $className
+     * @param  string $classType
+     * @return string
+     */
+    private function _getMvcControllerClassDir($className, $classType) {
         /**
          * Hack MVC controller directory path
          * i.e., Test/MageBuilder/IndexController --> Test/MageBuilder/controllers/IndexController
@@ -900,6 +944,18 @@ TEST_METHODS;
         $moduleNameDir = Mage::getModuleDir('', $moduleName);
         $escapedModuleNameDir = addcslashes($moduleNameDir, '/');
         $classNameDir = preg_replace('/'.$escapedModuleNameDir.'/', $moduleNameDir.'/controllers', $classNameDir);
+        return $classNameDir;
+    }
+
+    /**
+     * @param string $classType
+     */
+    private function _processCreateMvcController($classType){
+        $this->_testModuleName($classType);
+
+        $className = $this->_getMvcControllerClassName($classType);
+
+        $classNameDir = $this->_getMvcControllerClassDir($className, $classType);
 
         $this->_mkdir($classNameDir);
         $classNameFile = $this->_getClassNameFile($className);
@@ -942,8 +998,10 @@ $ php magebuilder <command> <[options]>
         * create-helper <class-type> [extends <class-type>]
         * create-controller <class-type> [extends <class-type>]
 
-        * check-path <class-type>
-        * check-class <class-type>
+        * check-path <group-type> <class-type>
+        * check-class <group-type> <class-type>
+
+        * listen-to <event-name> <class-type> <method-name>
 
         Options:
            module-name
@@ -952,8 +1010,12 @@ $ php magebuilder <command> <[options]>
                * test_magebuilder --> app/etc/Test_Magebuilder.xml
 
            module-alias - Unique identifier for your module
-           class-type - What you normally pass to Magento's factory methods. i.e. Mage::getModel(<class-type>)
-           extends - You want to specify a different parent class
+           group-type - <model|helper|block|controller|mvcontroller>
+           class-type - Magento's factory methods paramter.
+               i.e. Mage::getModel(<class-type>)
+           extends - Specify custom parent class
+           event-name - Magento's event name that you want to listen to.
+               i.e. dispatchEvent(<event-name>,...)
 
 Note: Check README.md for more info.
 
@@ -965,23 +1027,31 @@ USAGE;
      * @param string $groupType
      * @return bool
      */
-    private function _isValudGroupType($groupType) {
+    private function _isValidGroupType($groupType) {
         $groupType = ucfirst($groupType);
         switch ($groupType) {
             case self::GROUP_TYPE_BLOCK:
             case self::GROUP_TYPE_MODEL:
             case self::GROUP_TYPE_HELPER:
+            case self::GROUP_TYPE_MVCONTROLLER:
             case self::GROUP_TYPE_CONTROLLER:  return true;
             default: return false;
         }
     }
 
-    private function _getPathByGroupTypeAndClassType($classType, $groupType) {
-        $groupType = ucfirst($groupType);
-        $isValidGroupType = $this->_isValudGroupType($groupType);
+    /**
+     * @param string $groupType
+     */
+    private function _testValidGroupType($groupType){
+        $isValidGroupType = $this->_isValidGroupType($groupType);
         if (!$isValidGroupType) {
             $this->_error(self::ERRMSG_INVALID_GROUP_TYPE, strtolower($groupType));
         }
+    }
+
+    private function _getPathByGroupTypeAndClassType($classType, $groupType) {
+        $groupType = ucfirst($groupType);
+        $this->_testValidGroupType($groupType);
 
         if (!$classType) {
             $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
@@ -997,9 +1067,18 @@ USAGE;
         $classType = $this->_getArgParam(self::PIDX_CHECK_CLASS_PATH_CLASS_TYPE);
         $groupType = ucfirst($groupType);
 
-        $classDir = $this->_getPathByGroupTypeAndClassType($classType, $groupType);
-        $className = $this->_getObjectClassName($classType, $groupType);
-        $classFile = $classDir.'/'.$this->_getClassNameFile($className);
+        $this->_testValidGroupType($groupType);
+
+        if ($groupType == self::GROUP_TYPE_MVCONTROLLER) {
+            $className = $this->_getMvcControllerClassName($classType);
+            $classDir = $this->_getMvcControllerClassDir($className, $classType);
+            $classFile = $classDir.'/'.$this->_getClassNameFile($className);
+        }
+        else {
+            $className = $this->_getObjectClassName($classType, $groupType);
+            $classFile = $this->_getClassNameFilePath($className);
+        }
+
 
         if (file_exists($classFile)) {
             $this->_message($classFile."\n");
@@ -1013,9 +1092,17 @@ USAGE;
         $groupType = $this->_getArgParam(self::PIDX_CHECK_PATH_GROUP_TYPE);
         $classType = $this->_getArgParam(self::PIDX_CHECK_PATH_CLASS_TYPE);
 
-        $classDir = $this->_getPathByGroupTypeAndClassType($classType, $groupType);
+        if ($groupType == strtolower(self::GROUP_TYPE_MVCONTROLLER)) {
+            $mvcClassName = $this->_getMvcControllerClassName($classType);
+            $classDir = $this->_getMvcControllerClassDir($mvcClassName, $classType);
+        }
+        else {
+            $classDir = $this->_getPathByGroupTypeAndClassType($classType, $groupType);
+        }
 
         $ok = file_exists($classDir);
+
+
         if ($ok) {
             $this->_message($classDir."\n");
         }
@@ -1024,14 +1111,128 @@ USAGE;
         }
     }
 
+    private function _getModuleConfigFileFullPathByClassType($classType){
+        $moduleName = $this->_getModuleNameByClassType($classType);
+        $moduleDir = Mage::getModuleDir('etc', $moduleName);
+        if (!file_exists($moduleDir)) {
+            $this->_error(self::ERRMSG_INVALID_CLASS_TYPE, $classType);
+        }
+        return $moduleDir.'/config.xml';
+    }
+
+    /**
+     * @param string $classType
+     * @return SimpleXMLElement
+     */
+    private function _getModuleConfigByClassType($classType) {
+        $moduleFile = $this->_getModuleConfigFileFullPathByClassType($classType);
+        $moduleConfig = simplexml_load_file($moduleFile);
+        return $moduleConfig;
+    }
+
+    /**
+     * @param SimpleXMLElement $moduleConfig
+     */
+    private function _addGlobalToModuleConfig($moduleConfig) {
+        $global = $moduleConfig->xpath('global');
+        if (count($global)) { return; }
+        $moduleConfig->addChild('global');
+    }
+
+    /**
+     * @param SimpleXMLElement $moduleConfig
+     */
+    private function _addGlobalEventsToModuleConfig($moduleConfig) {
+        $this->_addGlobalToModuleConfig($moduleConfig);
+        $events = $moduleConfig->xpath('global/events');
+        if (count($events)) { return; }
+        $moduleConfig->global->addChild('events');
+    }
+
+    /**
+     * @param SimpleXMLElement $moduleConfig
+     * @param string $eventName
+     */
+    private function _addGlobalEventsEventToModuleConfig( $moduleConfig , $eventName ){
+        $this->_addGlobalEventsToModuleConfig($moduleConfig);
+        $event = $moduleConfig->xpath('global/events/'.$eventName);
+        if (count($event)) {return;}
+        $moduleConfig->global->events->addChild($eventName);
+    }
+
+    /**
+     * @param SimpleXMLElement $moduleConfig
+     * @param string $eventName
+     */
+    private function _addGlobalEventsEventObserversToModuleConfig($moduleConfig, $eventName) {
+        $this->_addGlobalEventsEventToModuleConfig($moduleConfig, $eventName);
+        $observers = $moduleConfig->xpath('global/events/'.$eventName.'/observers');
+        if (count($observers)) {return;}
+        $moduleConfig->global->events->{$eventName}->addChild('observers');
+    }
+
+    /**
+     * @param SimpleXMLElement $moduleConfig
+     * @param string $eventName
+     * @param string $listenerName
+     * @return bool
+     */
+    private function _addGlobalEventsEventObserversListenerToModuleConfig($moduleConfig, $eventName, $listenerName) {
+        $this->_addGlobalEventsEventObserversToModuleConfig($moduleConfig, $eventName);
+        $listener = $moduleConfig->xpath('global/events/'.$eventName.'/observers/'.$listenerName);
+        if (count($listener)) {return false;}
+        $moduleConfig->global->events->{$eventName}->observers->addChild($listenerName);
+        return true;
+    }
+
+    private function _processListenTo() {
+        $event = $this->_getArgParam(self::PIDX_LT_EVENT);
+        $classType = $this->_getArgParam(self::PIDX_LT_CLASS_TYPE);
+        $method = $this->_getArgParam(self::PIDX_LT_METHOD);
+
+        $className = $this->_getObjectClassName($classType, self::GROUP_TYPE_MODEL);
+        $moduleConfig = $this->_getModuleConfigByClassType($classType);
+        $classFile = $this->_getClassNameFilePath($className);
+
+        if (!file_exists($classFile)) {
+            $message = sprintf(self::MESSAGE_VERIFY_UNKNOWN_CLASS, $classType);
+            $response = $this->_verify($message);
+            if (!$response) { return; }
+            if ($response == 'n') { return; }
+        }
+        else {
+            /**
+             * Check method
+             */
+            if (! method_exists($className, $method)) {
+                $message = sprintf(self::MESSAGE_VERIFY_UNKNOWN_CLASS_METHOD, $className, $method);
+                $response = $this->_verify($message);
+                if (!$response) { return; }
+                if ($response == 'n') { return; }
+            }
+        }
+
+        $listenerName = strtolower($className);
+        $added = $this->_addGlobalEventsEventObserversListenerToModuleConfig($moduleConfig, $event, $listenerName);
+        if (!$added) {
+            $this->_error(self::ERRMSG_OBSERVER_EXISTS);
+        }
+        $moduleConfig->global->events->{$event}->observers->{$listenerName}->type = 'singleton';
+        $moduleConfig->global->events->{$event}->observers->{$listenerName}->class = $className;
+        $moduleConfig->global->events->{$event}->observers->{$listenerName}->method = $method;
+
+        $formattedXml = $this->_getFormattedXmlFromSimpleXML($moduleConfig);
+        $moduleFile = $this->_getModuleConfigFileFullPathByClassType($classType);
+        $this->_createFile($moduleFile, $formattedXml);
+        $this->_message(self::MESSAGE_REFRESH_XML_CACHE);
+        $this->_refreshCache(self::CACHE_TYPES_CONFIG);
+        $this->_message(self::MESSAGE_REFRESH_XML_CACHE_DONE);
+    }
+
     private function _processCommand() {
         $command = $this->_getArgParam(self::PIDX_COMMAND);
         $classType = $this->_getArgParam(self::PIDX_CO_CLASS_TYPE);
         $this->_mageConfig = Mage::getConfig();
-
-        if ($command != self::COMMAND_INIT){
-            $this->_testVersion();
-        }
 
         switch ($command) {
             case self::COMMAND_CREATE_MODULE: $this->_processCreateModule(); break;
@@ -1039,25 +1240,40 @@ USAGE;
             case self::COMMAND_CREATE_HELPER: $this->_processCreateObject($classType, self::GROUP_TYPE_HELPER); break;
             case self::COMMAND_CREATE_BLOCK: $this->_processCreateObject($classType, self::GROUP_TYPE_BLOCK); break;
             case self::COMMAND_CREATE_CONTROLLER: $this->_processCreateObject($classType, self::GROUP_TYPE_CONTROLLER); break;
-            case self::COMMAND_CREATE_MVC_CONTROLLER: $this->_processCreateMvcController($classType); break;
+            case self::COMMAND_CREATE_MVCONTROLLER: $this->_processCreateMvcController($classType); break;
             case self::COMMAND_CREATE_PROJECT: $this->_processCreateProject(); break;
             case self::COMMAND_INIT: $this->_processInit(); break;
             case self::COMMAND_CHECK_PATH: $this->_processCheckPath(); break;
             case self::COMMAND_CHECK_CLASS_PATH: $this->_processCheckClassPath(); break;
+            case self::COMMAND_LISTEN_TO: $this->_processListenTo(); break;
+            case self::COMMAND_HELP:
+            case self::COMMAND_HELP_:
+            case self::COMMAND_HELP__: $this->_usage(); break;
+
             default:
                 $message = sprintf(self::ERRMSG_UNKNOWN_COMMAND, $command);
                 $this->_message($message);
-                $this->_usage();
         }
     }
 
-    private function _init() {
-        $this->_detectHomeDir();
+    private function _initMageBuilderVariables(){
         $this->_mageBuilderDir = $this->_homeDir . '/' . self::CONFIG_DIR;
         $this->_mageBuilderFile = $this->_mageBuilderDir.'/'.self::CONFIG_FILE;
+
+    }
+
+    private function _initArgParams(){
         $this->_argv = $_SERVER['argv'];
         $this->_argc = $_SERVER['argc'];
+    }
+
+    private function _init() {
+        $this->_httpClient = new Zend_Http_Client();
+        $this->_detectHomeDir();
+        $this->_initMageBuilderVariables();
+        $this->_initArgParams();
         $this->_checkConfig();
+        $this->_testVersion();
         $this->_processCommand();
     }
 
