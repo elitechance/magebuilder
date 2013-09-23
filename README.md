@@ -107,8 +107,12 @@ Extending custom class
 
 > $ php magebuilder.php check-class model sales/order
 
+#### Adding event listener
 
-### Creating Project
+> $ php magebuilder.php listen-to event_name mbuilder/observer eventNameMethod
+
+
+#### Creating Project
 
 This is shortcut for:
 
