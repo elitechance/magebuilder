@@ -7,7 +7,7 @@ Set the correct path for magebuilder.php inside **mbd.sh** and include or move s
 
 Note that cd is a built-in command that's why we can't use it in pipes
 
-> $ cd `mbcp.sh model sales/order`
+> $ cd `` `mbcp.sh model sales/order` ``
 
 ##### Editing Magento file with **vim**
 
