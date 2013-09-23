@@ -61,9 +61,9 @@ This will create Test/MageBuilder/Model/Ns/Model2.php
 
 #### Creating blocks
 
-> $ php magebuilder.php create-blocks mbuilder/header
+> $ php magebuilder.php create-block mbuilder/header
 
-> $ php magebuilder.php create-blocks mbuilder/home_footer
+> $ php magebuilder.php create-block mbuilder/home_footer
 
 #### Creating class contollers
 
@@ -83,7 +83,7 @@ This will create Test/MageBuilder/controllers/IndexController.php
 
 This will create Test/MageBuilder/controllers/Admin/ApiController.php
 
-> $ php magebuilder.php create-mvc-controller mbuilder/admin_api
+> $ php magebuilder.php create-mvcontroller mbuilder/admin_api
 
 #### Extending custom class
 
