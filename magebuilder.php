@@ -89,6 +89,9 @@ class MageBuilder {
     const PIDX_LT_CLASS_TYPE = 3;
     const PIDX_LT_METHOD = 4;
 
+    const PIDX_REFRESH_LIST = 2;
+    const PVAL_REFRESH_LIST = 'list';
+
     const PVAL_EXTENDS = 'extends';
 
     const ERRMSG_CREATE_FILE = "Unable to create file: '%s'\n";
@@ -120,6 +123,17 @@ ERRMSG_INVALID_GROUP_TYPE_HD;
     const ERRMSG_EXTENDING_ITSELF  = "Error: The class is extending itself: [%s]\n";
     const ERRMSG_MAGE_ROOTPATH = "Please specify Magento root path\n\n    $ php magebuider.php init <root path>\n";
 
+    const MESSAGE_REFRESH_LIST = <<<MESSAGE_REFRESH_LIST_HD
+Cache Types:
+    {TYPES}
+
+MESSAGE_REFRESH_LIST_HD;
+
+    const MESSAGE_REFRESH_TYPE_DONE = "Done.\n";
+    const MESSAGE_REFRESH_TYPE_UNKNOWN = "Unkown cache type '%s'\n";
+    const MESSAGE_REFRESH_TYPE = "Refreshing cache type '%s'...\n";
+    const MESSAGE_REFRESH_ALL = "Refreshing all cache types...\n";
+    const MESSAGE_REFRESH_ALL_DONE = "Refreshing all cache types done.\n";
     const MESSAGE_DOWNLOADING_TEMPLATES = "Downloading templates...\n";
     const MESSAGE_DOWNLOADING_TEMPLATES_DONE = "Downloading templates done.\n";
     const MESSAGE_VERIFY_FILE = "Are you sure you want to overwrite '%s' [y|n]? (default 'n') \n";
@@ -148,6 +162,10 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
 
     const COMMAND_CHECK_PATH = 'check-path';
     const COMMAND_CHECK_CLASS_PATH = 'check-class';
+
+    const COMMAND_REFRESH_CACHE = 'refresh-cache';
+
+    const COMMAND_REFRESH_CONFIG = 'refresh-config';
 
     const COMMAND_LISTEN_TO = 'listen-to';
 
@@ -987,21 +1005,50 @@ TEST_METHODS;
     }
 
     private function _usage(){
+        $createProject = self::COMMAND_CREATE_PROJECT;
+        $createModule = self::COMMAND_CREATE_MODULE;
+        $createModel = self::COMMAND_CREATE_MODEL;
+        $createBlock = self::COMMAND_CREATE_BLOCK;
+        $createHelper = self::COMMAND_CREATE_HELPER;
+        $createController = self::COMMAND_CREATE_CONTROLLER;
+
+        $checkPath = self::COMMAND_CHECK_PATH;
+        $checkClass = self::COMMAND_CHECK_CLASS_PATH;
+
+        $listenTo = self::COMMAND_LISTEN_TO;
+
+        $refreshCache = self::COMMAND_REFRESH_CACHE;
+
+        $refreshConfig = self::COMMAND_REFRESH_CONFIG;
+
         $usage = <<<USAGE
 Usage:
 $ php magebuilder <command> <[options]>
     Commands:
-        * create-project <module-name> <module-alias>
-        * create-modules <module-name> <module-alias> [code-pool]
-        * create-model <class-type> [extends <class-type>]
-        * create-block <class-type> [extends <class-type>]
-        * create-helper <class-type> [extends <class-type>]
-        * create-controller <class-type> [extends <class-type>]
+        * $createProject <module-name> <module-alias>
+        * $createModule <module-name> <module-alias> [code-pool]
+        * $createModel <class-type> [extends <class-type>]
+        * $createBlock <class-type> [extends <class-type>]
+        * $createHelper <class-type> [extends <class-type>]
+        * $createController <class-type> [extends <class-type>]
 
-        * check-path <group-type> <class-type>
-        * check-class <group-type> <class-type>
+        * $checkPath <group-type> <class-type>
+        * $checkClass <group-type> <class-type>
 
-        * listen-to <event-name> <class-type> <method-name>
+        * $listenTo <event-name> <class-type> <method-name>
+
+        * $refreshCache [<list> | [cache-type] [cache-type] ...]
+            i.e.
+            - This will list all available cache types
+            $refreshCache list
+
+            - This will refresh all cache types
+            $refreshCache
+
+            - Specify specify cache type
+            $refreshCache eav config
+
+        * $refreshConfig
 
         Options:
            module-name
@@ -1010,12 +1057,13 @@ $ php magebuilder <command> <[options]>
                * test_magebuilder --> app/etc/Test_Magebuilder.xml
 
            module-alias - Unique identifier for your module
-           group-type - <model|helper|block|controller|mvcontroller>
-           class-type - Magento's factory methods paramter.
+           group-type   - <model|helper|block|controller|mvcontroller>
+           class-type   - Magento's factory methods paramter.
                i.e. Mage::getModel(<class-type>)
-           extends - Specify custom parent class
-           event-name - Magento's event name that you want to listen to.
+           extends      - Specify custom parent class
+           event-name   - Magento's event name that you want to listen to.
                i.e. dispatchEvent(<event-name>,...)
+           cache-type   - block_html, collections, config, config_api, ...
 
 Note: Check README.md for more info.
 
@@ -1229,6 +1277,72 @@ USAGE;
         $this->_message(self::MESSAGE_REFRESH_XML_CACHE_DONE);
     }
 
+    private function _displayCacheList() {
+        /**
+         * @var array $cacheTypes
+         */
+        $cacheTypes = Mage::app()->useCache();
+        $cacheTypesList = implode("\n    ", array_keys( $cacheTypes ) );
+        $message = preg_replace('/{TYPES}/', $cacheTypesList, self::MESSAGE_REFRESH_LIST);
+        $this->_message($message);
+    }
+
+    /**
+     * @param string $type
+     * @return bool
+     */
+    private function _isValidCacheType($type) {
+        $cacheTypes = Mage::app()->useCache();
+        if (isset($cacheTypes[$type])) {
+            return true;
+        }
+        return false;
+    }
+
+    private function _checkCacheType($type) {
+        $isValidType = $this->_isValidCacheType($type);
+        if (!$isValidType) {
+            $message = sprintf(self::MESSAGE_REFRESH_TYPE_UNKNOWN, $type);
+            $this->_message($message);
+        }
+        return $isValidType;
+    }
+
+    private function _processRefreshCache() {
+        $isList = $this->_getArgParam(self::PIDX_REFRESH_LIST);
+        $isList = strtolower($isList);
+        if ($isList) {
+            if ($isList == self::PVAL_REFRESH_LIST) {
+                $this->_displayCacheList();
+                return;
+            }
+            else {
+                for ($i = self::PIDX_REFRESH_LIST; $i < $this->_argc; $i++) {
+                    $type = $this->_getArgParam($i);
+                    if ($type) {
+                        $isValidType = $this->_checkCacheType($type);
+                        if ($isValidType) {
+                            $message = sprintf(self::MESSAGE_REFRESH_TYPE, $type);
+                            $this->_message($message);
+                            $this->_refreshCache($type);
+                        }
+                    }
+                }
+                $this->_message(self::MESSAGE_REFRESH_TYPE_DONE);
+            }
+        }
+        else {
+            $this->_message(self::MESSAGE_REFRESH_ALL);
+            $this->_refreshCache();
+            $this->_message(self::MESSAGE_REFRESH_ALL_DONE);
+        }
+    }
+
+    private function _processRefreshConfig() {
+        $config = Mage::getConfig();
+        $config->cleanCache();
+    }
+
     private function _processCommand() {
         $command = $this->_getArgParam(self::PIDX_COMMAND);
         $classType = $this->_getArgParam(self::PIDX_CO_CLASS_TYPE);
@@ -1246,6 +1360,8 @@ USAGE;
             case self::COMMAND_CHECK_PATH: $this->_processCheckPath(); break;
             case self::COMMAND_CHECK_CLASS_PATH: $this->_processCheckClassPath(); break;
             case self::COMMAND_LISTEN_TO: $this->_processListenTo(); break;
+            case self::COMMAND_REFRESH_CACHE: $this->_processRefreshCache(); break;
+            case self::COMMAND_REFRESH_CONFIG: $this->_processRefreshConfig(); break;
             case self::COMMAND_HELP:
             case self::COMMAND_HELP_:
             case self::COMMAND_HELP__: $this->_usage(); break;
