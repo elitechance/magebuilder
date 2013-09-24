@@ -119,6 +119,6 @@ This is shortcut for:
 - $ php magebuilder.php create-module test_project testprj
 - $ php magebuilder.php create-model testprj/hello
 - $ php magebuilder.php create-helper testprj
-- $ php magebuilder.php create-mvc-controller testprj/index
+- $ php magebuilder.php create-mvcontroller testprj/index
 
 > $ php magebuilder.php create-project test_project testprj
