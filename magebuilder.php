@@ -4,7 +4,6 @@
  * License: GPLv2
  */
 
-require_once('Zend/Http/Client.php');
 
 class MageBuilder {
     const VERSION = '0.0.2';
@@ -243,6 +242,8 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
 
     private function _loadMagento() {
         require_once $this->_magentoRootPath . '/app/Mage.php';
+        require_once('Zend/Http/Client.php');
+        $this->_httpClient = new Zend_Http_Client();
         Mage::app('admin');
     }
 
@@ -1384,7 +1385,6 @@ USAGE;
     }
 
     private function _init() {
-        $this->_httpClient = new Zend_Http_Client();
         $this->_detectHomeDir();
         $this->_initMageBuilderVariables();
         $this->_initArgParams();
