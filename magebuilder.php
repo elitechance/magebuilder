@@ -82,6 +82,17 @@ class MageBuilder {
     const PIDX_CP_ALIAS = 3;
 
     /**
+     * (DE) Dispatch Event
+     */
+    const PIDX_DE_NAME = 2;
+    const PIDX_DE_EVENT_VALUE = 3;
+    const PVAL_DE_JSON = '-j';
+    /**
+     * @ todo - support serialized object file
+     */
+    const PVAL_DE_SERIALIZED_OBJECT = '-s';
+
+    /**
      * (LT) Listen To
      */
     const PIDX_LT_EVENT = 2;
@@ -97,8 +108,15 @@ class MageBuilder {
     const ERRMSG_CREATE_DIR = "Unable to create dir: [%s]\n";
 
     const ERRMSG_INVALID_ROOTPATH = "Please specify a valid Magento root path: '%s'\n";
-    const ERRMSG_INVALID_CM_PARAMS = "Please specify name and alias.\n\n    $ magebuilder create-module <module name> <alias>\n";
-    const ERRMSG_INVALID_CODEPOOL = "Invalid Code Pool: '%s'\n    $ magebuilder create-module <module name> <alias> [core|community|local]\n";
+    const ERRMSG_INVALID_EVENT_VALUE = <<<ERRMSG_INVALID_EVENT_VALUE_HD
+Please specify valid event value.
+    $ magebuilder.php dispatch-event <event name> -j <json string here>
+    Sample:
+    $ magebuilder.php dispatch-event custom_event -j "['one', 'two', 'three']"
+
+ERRMSG_INVALID_EVENT_VALUE_HD;
+    const ERRMSG_INVALID_CM_PARAMS = "Please specify name and alias.\n\n    $ magebuilder.php create-module <module name> <alias>\n";
+    const ERRMSG_INVALID_CODEPOOL = "Invalid Code Pool: '%s'\n    $ magebuilder.php create-module <module name> <alias> [core|community|local]\n";
     const ERRMSG_INVALID_MODULE_NAME = <<<ERRMSG_INVALID_MODULE_NAME_HD
 Module name does not exists [%s].
     Hint:
@@ -167,6 +185,7 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
     const COMMAND_REFRESH_CONFIG = 'refresh-config';
 
     const COMMAND_LISTEN_TO = 'listen-to';
+    const COMMAND_DISPATCH_EVENT = 'dispatch-event';
 
     const COMMAND_INIT = 'init';
 
@@ -1022,6 +1041,8 @@ TEST_METHODS;
 
         $refreshConfig = self::COMMAND_REFRESH_CONFIG;
 
+        $dispatchEvent = self::COMMAND_DISPATCH_EVENT;
+
         $usage = <<<USAGE
 Usage:
 $ php magebuilder <command> <[options]>
@@ -1050,6 +1071,8 @@ $ php magebuilder <command> <[options]>
             $refreshCache eav config
 
         * $refreshConfig
+
+        * $dispatchEvent <event-name> -j <json string>
 
         Options:
            module-name
@@ -1344,6 +1367,33 @@ USAGE;
         $config->cleanCache();
     }
 
+    private function _getJsonEventValue() {
+        $length = count($this->_argv);
+        for ($i = 0; $i < $length; $i++) {
+            if ($this->_getArgParam($i) == self::PVAL_DE_JSON) {
+                return $this->_getArgParam($i+1);
+            }
+        }
+        return '';
+    }
+
+    private function _processDispatchEvent() {
+        $eventName = $this->_getArgParam(self::PIDX_DE_NAME);
+        $eventValue = $this->_getJsonEventValue();
+
+        if (!$eventName || !$eventValue) {
+            $this->_error(self::ERRMSG_INVALID_EVENT_VALUE);
+        }
+
+        try {
+            $value = json_decode($eventValue);
+            Mage::dispatchEvent($eventName, $value);
+        }
+        catch (Exception $e) {
+            $this->_error($e->getMessage());
+        }
+    }
+
     private function _processCommand() {
         $command = $this->_getArgParam(self::PIDX_COMMAND);
         $classType = $this->_getArgParam(self::PIDX_CO_CLASS_TYPE);
@@ -1363,6 +1413,7 @@ USAGE;
             case self::COMMAND_LISTEN_TO: $this->_processListenTo(); break;
             case self::COMMAND_REFRESH_CACHE: $this->_processRefreshCache(); break;
             case self::COMMAND_REFRESH_CONFIG: $this->_processRefreshConfig(); break;
+            case self::COMMAND_DISPATCH_EVENT: $this->_processDispatchEvent(); break;
             case self::COMMAND_HELP:
             case self::COMMAND_HELP_:
             case self::COMMAND_HELP__: $this->_usage(); break;
