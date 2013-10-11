@@ -75,6 +75,17 @@ class MageBuilder {
     const PIDX_CHECK_CLASS_PATH_GROUP_TYPE = 2;
     const PIDX_CHECK_CLASS_PATH_CLASS_TYPE = 3;
 
+    const PIDX_CORE_CONFIG_OPTION = 2;
+    const PIDX_CORE_CONFIG_LIST_PATTERN = 1;
+    const PIDX_CORE_CONFIG_PATH = 1;
+    const PIDX_CORE_CONFIG_SCOPE = 2;
+    const PIDX_CORE_CONFIG_VALUE = 2;
+
+    const PVAL_CORE_CONFIG_READ = '-r';
+    const PVAL_CORE_CONFIG_WRITE = '-w';
+    const PVAL_CORE_CONFIG_DELETE= '-d';
+    const PVAL_CORE_CONFIG_LIST = 'list';
+
     /**
      * (CP) Create Project
      */
@@ -115,6 +126,18 @@ Please specify valid event value.
     $ magebuilder.php dispatch-event custom_event -j "['one', 'two', 'three']"
 
 ERRMSG_INVALID_EVENT_VALUE_HD;
+
+    const ERRMSG_INVALID_CORE_CONFIG_PARAMS = <<<ERRMSG_INVALID_CORE_CONFIG_PARAMS
+Usage:
+    # Reading
+    $ magebuilder.php core-config -r <path> [scope id]
+    # Writing
+    $ magebuilder.php core-config -w <path> <value> [scope] [scope id]
+    # Deleting
+    $ magebuilder.php core-config -d <path> [scope] [scope id]
+
+ERRMSG_INVALID_CORE_CONFIG_PARAMS;
+
     const ERRMSG_INVALID_CM_PARAMS = "Please specify name and alias.\n\n    $ magebuilder.php create-module <module name> <alias>\n";
     const ERRMSG_INVALID_CODEPOOL = "Invalid Code Pool: '%s'\n    $ magebuilder.php create-module <module name> <alias> [core|community|local]\n";
     const ERRMSG_INVALID_MODULE_NAME = <<<ERRMSG_INVALID_MODULE_NAME_HD
@@ -166,8 +189,18 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
 
     const MESSAGE_REFRESH_XML_CACHE = "Refreshing *.xml Cache...\n";
     const MESSAGE_REFRESH_XML_CACHE_DONE = "Refreshing *.xml Cache... Done\n";
+    const MESSAGE_REFRESH_CORE_CONFIG = "Refreshing Core Config...\n";
+    const MESSAGE_REFRESH_CORE_CONFIG_DONE = "Refreshing Core Config... Done\n";
     const MESSAGE_REFRESH_CONFIG_CACHE = "Refreshing Config Cache...\n";
     const MESSAGE_REFRESH_CONFIG_CACHE_DONE = "Refreshing Config Cache... Done\n";
+
+    const MESSAGE_CORE_CONFIG_VALUE = <<<MESSAGE_CORE_CONFIG_VALUE
+Path: %s
+Value: %s
+
+MESSAGE_CORE_CONFIG_VALUE;
+    const MESSAGE_CORE_CONFIG_VALUE_EMPTY = "Path Value Not found.\n";
+
 
     const COMMAND_CREATE_MODULE = 'create-module';
     const COMMAND_CREATE_MODEL = 'create-model';
@@ -183,6 +216,8 @@ MESSAGE_CONFIG_WITH_OLDER_VERSION;
     const COMMAND_REFRESH_CACHE = 'refresh-cache';
 
     const COMMAND_REFRESH_CONFIG = 'refresh-config';
+
+    const COMMAND_CORE_CONFIG = 'core-config';
 
     const COMMAND_LISTEN_TO = 'listen-to';
     const COMMAND_DISPATCH_EVENT = 'dispatch-event';
@@ -1043,6 +1078,8 @@ TEST_METHODS;
 
         $dispatchEvent = self::COMMAND_DISPATCH_EVENT;
 
+        $coreConfig = self::COMMAND_CORE_CONFIG;
+
         $usage = <<<USAGE
 Usage:
 $ php magebuilder <command> <[options]>
@@ -1071,6 +1108,10 @@ $ php magebuilder <command> <[options]>
             $refreshCache eav config
 
         * $refreshConfig
+
+        * $coreConfig -r <path> [scope|scope id]
+        * $coreConfig -w <path> <value> [scope] [scope id]
+        * $coreConfig -d <path> [scope] [scope id]
 
         * $dispatchEvent <event-name> -j <json string>
 
@@ -1394,6 +1435,90 @@ USAGE;
         }
     }
 
+    private function _processCoreConfigWriting() {
+        $path = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 1);
+        $value = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 2);
+        $scope = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 3);
+        $scopeId = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 4);
+
+        /**
+         * @var Mage_Core_Model_Config $coreConfig
+         */
+        $coreConfig = Mage::getModel('core/config');
+        if (!$path) { $this->_error(self::ERRMSG_INVALID_CORE_CONFIG_PARAMS); }
+        if (!$value) { $this->_error(self::ERRMSG_INVALID_CORE_CONFIG_PARAMS); }
+
+        if ($scope && $scopeId) {
+            $coreConfig->saveConfig($path, $value, $scope, $scopeId);
+        }
+        else if ($scope) {
+            $coreConfig->saveConfig($path, $value, $scope);
+        }
+        else {
+            $coreConfig->saveConfig($path, $value);
+        }
+
+        $this->_message(self::MESSAGE_REFRESH_CORE_CONFIG);
+        $this->_processRefreshConfig();
+        $this->_message(self::MESSAGE_REFRESH_CORE_CONFIG_DONE);
+    }
+
+    private function _processCoreConfigReading() {
+        $path = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + self::PIDX_CORE_CONFIG_PATH);
+        $scope = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + self::PIDX_CORE_CONFIG_SCOPE);
+        $value = Mage::getStoreConfig($path, $scope);
+        if (isset($value)) {
+            $message = sprintf(self::MESSAGE_CORE_CONFIG_VALUE, $path, $value);
+            $this->_message($message);
+        }
+        else {
+            $this->_message(self::MESSAGE_CORE_CONFIG_VALUE_EMPTY);
+        }
+    }
+
+    private function _processCoreConfigListing() {
+        /**
+         * @todo - support path listing
+         */
+    }
+
+    private function _processCoreConfigDelete() {
+        $path = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 1);
+        $scope = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 2);
+        $scopeId = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 3);
+
+        /**
+         * @var Mage_Core_Model_Config $coreConfig
+         */
+        $coreConfig = Mage::getModel('core/config');
+        if (!$path) { $this->_error(self::ERRMSG_INVALID_CORE_CONFIG_PARAMS); }
+
+        if ($scope && $scopeId) {
+            $coreConfig->deleteConfig($path, $scope, $scopeId);
+        }
+        else if ($scope) {
+            $coreConfig->deleteConfig($path, $scope);
+        }
+        else {
+            $coreConfig->deleteConfig($path);
+        }
+
+        $this->_message(self::MESSAGE_REFRESH_CORE_CONFIG);
+        $this->_processRefreshConfig();
+        $this->_message(self::MESSAGE_REFRESH_CORE_CONFIG_DONE);
+    }
+
+    private function _processCoreConfig() {
+        $option = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION);
+        switch($option) {
+            case self::PVAL_CORE_CONFIG_READ: $this->_processCoreConfigReading(); break;
+            case self::PVAL_CORE_CONFIG_WRITE: $this->_processCoreConfigWriting(); break;
+            case self::PVAL_CORE_CONFIG_DELETE: $this->_processCoreConfigDelete(); break;
+            case self::PVAL_CORE_CONFIG_LIST: $this->_processCoreConfigListing(); break;
+            default: $this->_error(self::ERRMSG_INVALID_CORE_CONFIG_PARAMS);
+        }
+    }
+
     private function _processCommand() {
         $command = $this->_getArgParam(self::PIDX_COMMAND);
         $classType = $this->_getArgParam(self::PIDX_CO_CLASS_TYPE);
@@ -1413,6 +1538,7 @@ USAGE;
             case self::COMMAND_LISTEN_TO: $this->_processListenTo(); break;
             case self::COMMAND_REFRESH_CACHE: $this->_processRefreshCache(); break;
             case self::COMMAND_REFRESH_CONFIG: $this->_processRefreshConfig(); break;
+            case self::COMMAND_CORE_CONFIG: $this->_processCoreConfig(); break;
             case self::COMMAND_DISPATCH_EVENT: $this->_processDispatchEvent(); break;
             case self::COMMAND_HELP:
             case self::COMMAND_HELP_:
