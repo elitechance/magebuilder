@@ -84,7 +84,7 @@ class MageBuilder {
     const PVAL_CORE_CONFIG_READ = '-r';
     const PVAL_CORE_CONFIG_WRITE = '-w';
     const PVAL_CORE_CONFIG_DELETE= '-d';
-    const PVAL_CORE_CONFIG_LIST = 'list';
+    const PVAL_CORE_CONFIG_LIST = '-l';
 
     /**
      * (CP) Create Project
@@ -135,6 +135,8 @@ Usage:
     $ magebuilder.php core-config -w <path> <value> [scope] [scope id]
     # Deleting
     $ magebuilder.php core-config -d <path> [scope] [scope id]
+    # Listing
+    $ magebuilder.php core-config -l <pattern> [limit: default 20] [offset: 0]
 
 ERRMSG_INVALID_CORE_CONFIG_PARAMS;
 
@@ -1112,6 +1114,7 @@ $ php magebuilder <command> <[options]>
         * $coreConfig -r <path> [scope|scope id]
         * $coreConfig -w <path> <value> [scope] [scope id]
         * $coreConfig -d <path> [scope] [scope id]
+        * $coreConfig -l <path> [limit: default 20] [offset: 0]
 
         * $dispatchEvent <event-name> -j <json string>
 
@@ -1477,9 +1480,40 @@ USAGE;
     }
 
     private function _processCoreConfigListing() {
+        $pattern = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 1);
+        $limit = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 2);
+        $offset = $this->_getArgParam(self::PIDX_CORE_CONFIG_OPTION + 3);
+
+        if (!$limit) { $limit = 20; }
+        if (!$offset) { $offset = 0; }
+        if (!$pattern) { $this->_error(self::ERRMSG_INVALID_CORE_CONFIG_PARAMS);}
+
         /**
-         * @todo - support path listing
+         * @var Varien_Db_Adapter_Pdo_Mysql  $directReader
          */
+        $resource = Mage::getSingleton('core/resource');
+        $directReader = $resource->getConnection('core_read');
+        $select = $directReader->select();
+        $select->from('core_config_data');
+        $select->limit($limit, $offset);
+        $select->where('path LIKE ?', $pattern);
+        $rows = $directReader->fetchAll($select);
+        $i = 0;
+        foreach ($rows as $row) {
+            $csvRow = array();
+            if (0 == $i) { echo '"ID","Path","Value","Scope","Scope Id"'."\n"; }
+            $csvRow[] = $row['config_id'];
+            $csvRow[] = $row['path'];
+            $csvRow[] = $row['value'];
+            $csvRow[] = $row['scope'];
+            $csvRow[] = $row['scope_id'];
+            echo '"';
+            echo implode('","', $csvRow);
+            echo '"';
+            echo "\n";
+            $i++;
+        }
+
     }
 
     private function _processCoreConfigDelete() {

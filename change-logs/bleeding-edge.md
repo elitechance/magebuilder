@@ -5,3 +5,4 @@ Bleeding Edge
 - Added config refresh
 - Added dispatch-event command
 - Added CRUD for core_config_data
+- Added core_config_data listing

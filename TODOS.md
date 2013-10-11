@@ -8,4 +8,3 @@ No particular order in terms of future support
 - Configurable templates
 - Support for PHP Lib
 - Add sample layout value during "create-project" command
-- Support core_config_data listing
