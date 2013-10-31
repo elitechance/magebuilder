@@ -1,0 +1,77 @@
+<?php
+/**
+ * MageBuilder Twig Template
+ */
+
+class {CLASS} extends {PARENT_CLASS} {
+    /**
+     * @var Mage_Core_Block_Template
+     */
+    protected $_coreTemplate;
+
+    public function _construct() {
+        parent::_construct();
+        $this->_coreTemplate = new Mage_Core_Block_Template();
+    }
+
+    protected function _toHtml() {
+        return $this->_twig->render($this->getTemplateFile(), $this->_fetchRenderVariables());
+    }
+
+    public function setTemplate($template) {
+        $this->_coreTemplate->setTemplate($template);
+        $this->_twig->loadTemplate($this->getTemplateFile());
+    }
+
+    public function getTemplate() {
+        return $this->_coreTemplate->getTemplate();
+    }
+
+    public function getTemplateFile() {
+        return $this->_coreTemplate->getTemplateFile();
+    }
+
+    public function getArea() {
+        return $this->_coreTemplate->getArea();
+    }
+
+    public function assign($key, $value = null) {
+        return $this->_coreTemplate->assign($key, $value);
+    }
+
+    public function setScriptPath($dir) {
+        return $this->_coreTemplate->setScriptPath($dir);
+    }
+
+    public function getDirectOutput() {
+        return $this->_coreTemplate->getDirectOutput();
+    }
+
+    public function getShowTemplateHints() {
+        return $this->_coreTemplate->getShowTemplateHints();
+    }
+
+    public function fetchView($fileName) {
+        return $this->_coreTemplate->fetchView($fileName);
+    }
+
+    public function renderView() {
+        return $this->_coreTemplate->renderView();
+    }
+
+    public function getBaseUrl() {
+        return $this->_coreTemplate->getBaseUrl();
+    }
+
+    public function getJsUrl($fileName = '') {
+        return $this->_coreTemplate->getJsUrl($fileName);
+    }
+
+    public function getObjectData(Varien_Object $object, $key) {
+        return $this->_coreTemplate->getObjectData($object, $key);
+    }
+
+    public function getCacheKeyInfo() {
+        return $this->_coreTemplate->getCacheKeyInfo();
+    }
+}

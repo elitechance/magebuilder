@@ -1,0 +1,7 @@
+<?php
+/**
+ * MageBuilder Twig Template
+ */
+
+class {CLASS} extends {PARENT_CLASS} {
+}

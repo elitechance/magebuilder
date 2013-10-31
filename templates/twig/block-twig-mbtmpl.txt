@@ -1,0 +1,7 @@
+<?php
+/**
+ * MageBuilder Twig Template
+ */
+
+class {CLASS} extends StraighterLine_Core_Block_Twig_Abstract {
+}
